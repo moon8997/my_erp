@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.myproject.caseNara.mapper.SalesMapper">
+
+    <insert id="insertSale" parameterType="com.myproject.caseNara.model.Sale" useGeneratedKeys="true" keyProperty="saleId">
+        <selectKey keyProperty="saleId" resultType="long" order="BEFORE">
+            SELECT NVL(MAX(SALE_ID), 0) + 1 FROM SALES
+        </selectKey>
+        INSERT INTO SALES (
+            SALE_ID,
+            CUSTOMER_ID,
+            PRODUCT_ID,
+            QUANTITY,
+            UNIT_PRICE,
+            SALE_AT,
+            DELETED
+        ) VALUES (
+            #{saleId,jdbcType=NUMERIC},
+            #{customerId,jdbcType=NUMERIC},
+            #{productId,jdbcType=NUMERIC},
+            #{quantity,jdbcType=NUMERIC},
+            #{unitPrice,jdbcType=NUMERIC},
+            #{saleAt,jdbcType=TIMESTAMP},
+            0
+        )
+    </insert>
+
+    <!-- 상호명 기준 인기 상품 Top 5 -->
+    <select id="listTopProductNamesByCompanyName" parameterType="string" resultType="string">
+        SELECT PRODUCT_NAME
+        FROM (
+            SELECT p.PRODUCT_NAME AS PRODUCT_NAME, COUNT(1) AS CNT
+            FROM SALES s
+            JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
+            JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
+            WHERE c.COMPANY_NAME = #{companyName}
+              AND NVL(s.DELETED, 0) = 0
+              AND NVL(p.DELETED, 0) = 0
+              AND NVL(c.DELETED, 0) = 0
+            GROUP BY p.PRODUCT_NAME
+            ORDER BY CNT DESC
+        )
+        WHERE ROWNUM &lt;= 5
+    </select>
+
+</mapper>

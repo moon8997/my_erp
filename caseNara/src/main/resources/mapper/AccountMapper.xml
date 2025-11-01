@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.myproject.caseNara.mapper.AccountMapper">
+    <insert id="insertAccount" parameterType="com.myproject.caseNara.model.Account">
+        INSERT INTO ACCOUNT (ACCOUNT_SEQ, ID, PASSWORD)
+        VALUES ((SELECT NVL(MAX(ACCOUNT_SEQ), 0) + 1 FROM ACCOUNT), #{id}, #{password})
+    </insert>
+    
+    <select id="findById" parameterType="string" resultType="com.myproject.caseNara.model.Account">
+        SELECT ACCOUNT_SEQ, ID, PASSWORD
+        FROM ACCOUNT
+        WHERE ID = #{id}
+    </select>
+
+    <select id="countById" parameterType="string" resultType="int">
+        SELECT COUNT(1)
+        FROM ACCOUNT
+        WHERE ID = #{id}
+    </select>
+</mapper>
