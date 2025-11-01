@@ -1,36 +1,48 @@
-cursor-talk-to-figma-mcp/
-.vscode/
-frontend/node_modules
-frontend/dist
-frontend/.DS_Store
+# OS generated files
+.DS_Store
 *.log
+
+# Editor directories
+.vscode/
+.idea/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Spring Boot (caseNara)
 caseNara/HELP.md
 caseNara/target/
+caseNara/build/
+caseNara/src/main/resources/static/
+
+# Maven
 caseNara/.mvn/wrapper/maven-wrapper.jar
 caseNara/!**/src/main/**/target/
 caseNara/!**/src/test/**/target/
-caseNara/### STS ###
-caseNara/.apt_generated
+caseNara/!**/src/main/**/build/
+caseNara/!**/src/test/**/build/
+
+# Eclipse/STS
+caseNara/.apt_generated/
 caseNara/.classpath
 caseNara/.factorypath
 caseNara/.project
-caseNara/.settings
+caseNara/.settings/
 caseNara/.springBeans
-caseNara/.sts4-cache
-caseNara/### IntelliJ IDEA ###
-caseNara/.idea
+caseNara/.sts4-cache/
+
+# IntelliJ IDEA
 caseNara/*.iws
 caseNara/*.iml
 caseNara/*.ipr
-caseNara/### NetBeans ###
-caseNara//nbproject/private/
-caseNara//nbbuild/
-caseNara//dist/
-caseNara//nbdist/
-caseNara//.nb-gradle/
-caseNara/build/
-caseNara/!**/src/main/**/build/
-caseNara/!**/src/test/**/build/
-caseNara/### VS Code ###
-caseNara/.vscode/
-caseNara/src/main/resources/static/
+
+# NetBeans
+caseNara/nbproject/private/
+caseNara/nbbuild/
+caseNara/dist/
+caseNara/nbdist/
+caseNara/.nb-gradle/
+
+# Unnecessary directories
+cursor-talk-to-figma-mcp/
