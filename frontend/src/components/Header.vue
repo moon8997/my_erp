@@ -204,11 +204,11 @@ const fetchMenus = async () => {
     // 에러 발생 시 기본 메뉴 사용
     menus.value = [
       { menuCode: 1, menuName: '대시보드', displayOrder: 0, endpoint: '/', parentCode: null },
-      { menuCode: 2, menuName: '주문등록', displayOrder: 1, endpoint: '/add-order', parentCode: null },
+      { menuCode: 2, menuName: '주문등록', displayOrder: 1, endpoint: '/order/add', parentCode: null },
       { menuCode: 3, menuName: '상품관리', displayOrder: 2, endpoint: null, parentCode: null },
-      { menuCode: 6, menuName: '상품등록', displayOrder: 2, endpoint: '/add-product', parentCode: 3 },
-      { menuCode: 7, menuName: '상품리스트', displayOrder: 2, endpoint: '/list-product', parentCode: 3 },
-      { menuCode: 4, menuName: '거래처등록', displayOrder: 3, endpoint: '/add-customer', parentCode: null },
+      { menuCode: 6, menuName: '상품등록', displayOrder: 2, endpoint: '/product/add', parentCode: 3 },
+      { menuCode: 7, menuName: '상품목록', displayOrder: 1, endpoint: '/product/list', parentCode: 3 },
+      { menuCode: 4, menuName: '거래처등록', displayOrder: 3, endpoint: '/customer/add', parentCode: null },
       { menuCode: 5, menuName: '수금업무', displayOrder: 4, endpoint: null, parentCode: null }
     ]
   }

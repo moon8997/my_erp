@@ -10,7 +10,7 @@
             ENDPOINT AS endpoint,
             PARENT_CODE AS parentCode
         FROM MENUS
-        ORDER BY DISPLAY_ORDER ASC;
+        ORDER BY DISPLAY_ORDER ASC
     </select>
     
     <select id="getMenuByCode" parameterType="int" resultType="com.myproject.caseNara.model.Menu">

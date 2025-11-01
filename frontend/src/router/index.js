@@ -1,18 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
-import AddProduct from '../views/AddProduct.vue';
-import AddCustomer from '../views/AddCustomer.vue';
-import AddOrder from '../views/AddOrder.vue';
+import ProductAdd from '../views/ProductAdd.vue';
+import CustomerAdd from '../views/CustomerAdd.vue';
+import OrderAdd from '../views/OrderAdd.vue';
+import ProductList from '../views/ProductList.vue';
 import Header from '../components/Header.vue';
 import NotFound from '../views/NotFound.vue';
 
 const routes = [
   { path: '/login', component: Login },
   { path: '/register', component: Register },
-  { path: '/add-product', component: AddProduct },
-  { path: '/add-customer', component: AddCustomer },
-  { path: '/add-order', component: AddOrder },
+  { path: '/product/add', component: ProductAdd },
+  { path: '/customer/add', component: CustomerAdd },
+  { path: '/order/add', component: OrderAdd },
+  { path: '/product/list', component: ProductList },
   { path: '/header', component: Header },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }
 ];

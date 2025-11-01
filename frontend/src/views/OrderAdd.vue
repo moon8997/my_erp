@@ -9,7 +9,7 @@
       <form @submit.prevent="submitOrder" class="form">
         <div class="row">
           <label class="label" for="customerName">
-            상호명 <span class="req">*</span>
+            <i class="fas fa-building"></i> 상호명 <span class="req">*</span>
           </label>
           <div class="field with-icon" style="position:relative;">
             <input
@@ -37,7 +37,7 @@
 
         <div class="row">
           <label class="label" for="saleDate">
-            주문일자 <span class="req">*</span>
+            <i class="fas fa-calendar"></i> 주문일자 <span class="req">*</span>
           </label>
           <div class="field">
             <input
@@ -66,14 +66,20 @@
 
         <div class="row items-row">
           <div class="items-header">
-            <span class="label">주문 상품 <span class="req">*</span></span>
-            <button type="button" class="btn add" @click="addItem">상품 추가</button>
+            <span class="label">
+              <i class="fas fa-box"></i> 주문 상품 <span class="req">*</span>
+            </span>
+            <button type="button" class="btn add" @click="addItem">
+              <i class="fas fa-plus"></i> 상품 추가
+            </button>
           </div>
 
           <div class="items">
             <div v-for="(item, idx) in form.items" :key="idx" class="item">
               <div class="field" style="position:relative;">
-                <label class="label" :for="`productName-${idx}`">상품명</label>
+                <label class="label" :for="`productName-${idx}`">
+                  <i class="fas fa-tag"></i> 상품명
+                </label>
                 <input
                   :id="`productName-${idx}`"
                   v-model="item.productName"
@@ -97,7 +103,9 @@
               </div>
 
               <div class="field">
-                <label class="label" :for="`quantity-${idx}`">갯수</label>
+                <label class="label" :for="`quantity-${idx}`">
+                  <i class="fas fa-hashtag"></i> 갯수
+                </label>
                 <input
                   :id="`quantity-${idx}`"
                   v-model.number="item.quantity"
@@ -108,7 +116,9 @@
               </div>
 
               <div class="field">
-                <label class="label" :for="`price-${idx}`">가격</label>
+                <label class="label" :for="`price-${idx}`">
+                  <i class="fas fa-won-sign"></i> 가격
+                </label>
                 <input
                   :id="`price-${idx}`"
                   v-model.number="item.price"
@@ -116,14 +126,16 @@
                   readonly
                 />
               </div>
-              <button type="button" class="btn remove" @click="removeItem(idx)">삭제</button>
+              <button type="button" class="btn remove" @click="removeItem(idx)">
+                <i class="fas fa-trash-alt"></i> 삭제
+              </button>
             </div>
           </div>
         </div>
         
         <div>
           <label class="label" for="totalAmount">
-            총액 <span class="req">*</span>
+            <i class="fas fa-calculator"></i> 총액 <span class="req">*</span>
           </label>
           <div class="field">
             <input
@@ -138,8 +150,12 @@
         </div>
 
         <div class="actions">
-          <button type="submit" class="btn primary">주문 등록</button>
-          <button type="button" class="btn" @click="onCancel">취소</button>
+          <button type="submit" class="btn primary">
+            <i class="fas fa-check"></i> 주문 등록
+          </button>
+          <button type="button" class="btn" @click="onCancel">
+            <i class="fas fa-times"></i> 취소
+          </button>
         </div>
       </form>
     </section>

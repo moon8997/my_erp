@@ -10,14 +10,18 @@
             PRODUCT_NAME, 
             SALE_PRICE, 
             COST_PRICE, 
-            IMAGE_URL, 
+            IMAGE_URL,
+            SUPPLIER_ID,
+            DISPLAY_LOCATION,
             DELETED
         ) VALUES (
             #{productId,jdbcType=NUMERIC},
             #{productName}, 
             #{salePrice}, 
             #{costPrice}, 
-            #{imageUrl}, 
+            #{imageUrl},
+            #{supplierId},
+            #{displayLocation},
             0
         )
     </insert>
@@ -29,6 +33,8 @@
             SALE_PRICE as salePrice,
             COST_PRICE as costPrice,
             IMAGE_URL as imageUrl,
+            SUPPLIER_ID as supplierId,
+            DISPLAY_LOCATION as displayLocation,
             CREATED_AT as createdAt,
             UPDATED_AT as updatedAt,
             DELETED as deleted
@@ -45,6 +51,8 @@
             SALE_PRICE as salePrice,
             COST_PRICE as costPrice,
             IMAGE_URL as imageUrl,
+            SUPPLIER_ID as supplierId,
+            DISPLAY_LOCATION as displayLocation,
             CREATED_AT as createdAt,
             UPDATED_AT as updatedAt,
             DELETED as deleted
@@ -69,7 +77,9 @@
             PRODUCT_NAME = #{productName}, 
             SALE_PRICE = #{salePrice}, 
             COST_PRICE = #{costPrice}, 
-            IMAGE_URL = #{imageUrl}
+            IMAGE_URL = #{imageUrl},
+            SUPPLIER_ID = #{supplierId},
+            DISPLAY_LOCATION = #{displayLocation}
         WHERE 
             PRODUCT_ID = #{productId}
     </update>
@@ -81,6 +91,8 @@
             SALE_PRICE as salePrice,
             COST_PRICE as costPrice,
             IMAGE_URL as imageUrl,
+            SUPPLIER_ID as supplierId,
+            DISPLAY_LOCATION as displayLocation,
             CREATED_AT as createdAt,
             UPDATED_AT as updatedAt,
             DELETED as deleted
@@ -93,6 +105,14 @@
         SELECT PRODUCT_NAME
         FROM PRODUCTS
         WHERE DELETED = 0
+        ORDER BY PRODUCT_NAME ASC
+    </select>
+    
+    <select id="listProductNamesLike" parameterType="string" resultType="string">
+        SELECT PRODUCT_NAME
+        FROM PRODUCTS
+        WHERE PRODUCT_NAME LIKE '%' || #{query} || '%'
+          AND DELETED = 0
         ORDER BY PRODUCT_NAME ASC
     </select>
     

@@ -25,19 +25,19 @@ public class ProductController {
         try {
             productMapper.insertProduct(product);
             if (lookupService != null) lookupService.invalidateProducts();
-            // Map.of(...)는 null 값을 허용하지 않으므로, productId가 null일 수 있는 경우 안전하게 처리합니다.
-            java.util.Map<String, Object> body = new java.util.HashMap<>();
-            body.put("success", true);
-            if (product.getProductId() != null) {
-                body.put("productId", product.getProductId());
-            }
-            return ResponseEntity.ok(body);
+            return ResponseEntity.ok(Map.of("success", true, "productId", product.getProductId()));
         } catch (Exception e) {
-            // e.getMessage()가 null일 수 있으므로 안전하게 처리
-            java.util.Map<String, Object> error = new java.util.HashMap<>();
-            error.put("success", false);
-            error.put("message", e.getMessage() != null ? e.getMessage() : "Unknown error");
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage() != null ? e.getMessage() : "Unknown error"));
+        }
+    }
+
+    @GetMapping("/list")
+    public ResponseEntity<List<Product>> getProducts() {
+        try {
+            List<Product> products = productMapper.getAllProducts();
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 
