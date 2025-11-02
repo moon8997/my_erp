@@ -1,49 +1,126 @@
 package com.myproject.caseNara.controller;
 
-import com.myproject.caseNara.mapper.CustomerMapper;
-import com.myproject.caseNara.mapper.SalesMapper;
 import com.myproject.caseNara.model.Customer;
-import com.myproject.caseNara.service.LookupService;
+import com.myproject.caseNara.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/customers")
 public class CustomerController {
 
     @Autowired
-    private CustomerMapper customerMapper;
-    @Autowired(required = false)
-    private LookupService lookupService;
-    @Autowired
-    private SalesMapper salesMapper;
+    private CustomerService customerService;
+
+    // 고객(거래처) 목록 조회
+    @GetMapping
+    public ResponseEntity<?> getAllCustomers() {
+        try {
+            List<Customer> customers = customerService.getAllCustomers();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "customers", customers
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+            ));
+        }
+    }
+
+    // 고객(거래처) 상세 조회
+    @GetMapping("/{customerId}")
+    public ResponseEntity<?> getCustomerById(@PathVariable Long customerId) {
+        try {
+            Customer customer = customerService.getCustomerById(customerId);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "customer", customer
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+            ));
+        }
+    }
 
     // 고객(거래처) 등록
     @PostMapping("/add")
     public ResponseEntity<?> addCustomer(@RequestBody(required = false) Customer customer) {
         try {
-            if (customer == null) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Customer data is null"));
-            }
-            // System.out.println(customer);
-            customerMapper.insertCustomer(customer);
-            if (lookupService != null) lookupService.invalidateCustomers();
-            java.util.Map<String, Object> body = new java.util.HashMap<>();
-            // System.out.println("아아아");
-            body.put("success", true);
-            if (customer.getCustomerId() != null) {
-                body.put("customerId", customer.getCustomerId());
-            }
+            customer = customerService.addCustomer(customer);
+            Map<String, Object> body = Map.of(
+                "success", true,
+                "customerId", customer.getCustomerId()
+            );
             return ResponseEntity.ok(body);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().startsWith("이미 등록된 상호명입니다")) {
+                return ResponseEntity.status(409).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+                ));
+            }
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
         } catch (Exception e) {
-            java.util.Map<String, Object> error = new java.util.HashMap<>();
-            error.put("success", false);
-            error.put("message", e.getMessage() != null ? e.getMessage() : "Unknown error");
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+            ));
+        }
+    }
+
+    // 고객(거래처) 수정
+    @PutMapping("/{customerId}")
+    public ResponseEntity<?> updateCustomer(@PathVariable Long customerId, @RequestBody Customer customerDetails) {
+        try {
+            Customer updatedCustomer = customerService.updateCustomer(customerId, customerDetails);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "customer", updatedCustomer
+            ));
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().startsWith("이미 등록된 상호명입니다")) {
+                return ResponseEntity.status(409).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+                ));
+            }
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+            ));
+        }
+    }
+
+    // 고객(거래처) 삭제
+    @DeleteMapping("/{customerId}")
+    public ResponseEntity<?> deleteCustomer(@PathVariable Long customerId) {
+        try {
+            customerService.deleteCustomer(customerId);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "고객이 성공적으로 삭제되었습니다"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+            ));
         }
     }
 
@@ -51,24 +128,16 @@ public class CustomerController {
     @GetMapping("/top-products")
     public ResponseEntity<?> getTopProducts(@RequestParam("companyName") String companyName) {
         try {
-            String name = (companyName == null) ? "" : companyName.trim();
-            // 공백 또는 존재하지 않는 상호명인 경우에도 에러 대신 빈 추천 리스트로 응답
-            if (name.isEmpty()) {
-                return ResponseEntity.ok(Map.of("success", true, "products", List.of()));
-            }
-
-            Customer customer = customerMapper.findByCompanyName(name);
-            if (customer == null) {
-                return ResponseEntity.ok(Map.of("success", true, "products", List.of()));
-            }
-
-            List<String> products = salesMapper.listTopProductNamesByCompanyName(name);
-            if (products == null) products = List.of();
+            List<String> products = customerService.getTopProducts(companyName);
             return ResponseEntity.ok(Map.of("success", true, "products", products));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
         }
     }
+
 
     // 상호명 중복 검사
     @GetMapping("/check-duplicate")
@@ -80,7 +149,7 @@ public class CustomerController {
                 return ResponseEntity.ok(Map.of("success", true, "isDuplicate", false));
             }
 
-            Customer existing = customerMapper.findByCompanyName(name);
+            Customer existing = customerService.findByCompanyName(name);
             boolean isDuplicate = existing != null;
             return ResponseEntity.ok(Map.of(
                 "success", true,

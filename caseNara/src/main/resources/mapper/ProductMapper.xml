@@ -11,17 +11,17 @@
             SALE_PRICE, 
             COST_PRICE, 
             IMAGE_URL,
-            SUPPLIER_ID,
+            SUPPLIER,
             DISPLAY_LOCATION,
             DELETED
         ) VALUES (
             #{productId,jdbcType=NUMERIC},
-            #{productName}, 
-            #{salePrice}, 
-            #{costPrice}, 
-            #{imageUrl},
-            #{supplierId},
-            #{displayLocation},
+            #{productName,jdbcType=VARCHAR}, 
+            #{salePrice,jdbcType=NUMERIC}, 
+            #{costPrice,jdbcType=NUMERIC}, 
+            #{imageUrl,jdbcType=VARCHAR},
+            #{supplier,jdbcType=VARCHAR},
+            #{displayLocation,jdbcType=VARCHAR},
             0
         )
     </insert>
@@ -33,7 +33,7 @@
             SALE_PRICE as salePrice,
             COST_PRICE as costPrice,
             IMAGE_URL as imageUrl,
-            SUPPLIER_ID as supplierId,
+            SUPPLIER as supplier,
             DISPLAY_LOCATION as displayLocation,
             CREATED_AT as createdAt,
             UPDATED_AT as updatedAt,
@@ -51,7 +51,7 @@
             SALE_PRICE as salePrice,
             COST_PRICE as costPrice,
             IMAGE_URL as imageUrl,
-            SUPPLIER_ID as supplierId,
+            SUPPLIER as supplier,
             DISPLAY_LOCATION as displayLocation,
             CREATED_AT as createdAt,
             UPDATED_AT as updatedAt,
@@ -70,18 +70,18 @@
         WHERE 
             PRODUCT_ID = #{productId}
     </update>
-    
+
     <update id="updateProduct" parameterType="com.myproject.caseNara.model.Product">
         UPDATE PRODUCTS 
         SET 
-            PRODUCT_NAME = #{productName}, 
-            SALE_PRICE = #{salePrice}, 
-            COST_PRICE = #{costPrice}, 
-            IMAGE_URL = #{imageUrl},
-            SUPPLIER_ID = #{supplierId},
-            DISPLAY_LOCATION = #{displayLocation}
+            PRODUCT_NAME = #{productName,jdbcType=VARCHAR}, 
+            SALE_PRICE = #{salePrice,jdbcType=NUMERIC}, 
+            COST_PRICE = #{costPrice,jdbcType=NUMERIC}, 
+            IMAGE_URL = #{imageUrl,jdbcType=VARCHAR},
+            SUPPLIER = #{supplier,jdbcType=VARCHAR},
+            DISPLAY_LOCATION = #{displayLocation,jdbcType=VARCHAR}
         WHERE 
-            PRODUCT_ID = #{productId}
+            PRODUCT_ID = #{productId,jdbcType=NUMERIC}
     </update>
     
     <select id="getProductByName" parameterType="string" resultType="com.myproject.caseNara.model.Product">
@@ -91,7 +91,7 @@
             SALE_PRICE as salePrice,
             COST_PRICE as costPrice,
             IMAGE_URL as imageUrl,
-            SUPPLIER_ID as supplierId,
+            SUPPLIER as supplier,
             DISPLAY_LOCATION as displayLocation,
             CREATED_AT as createdAt,
             UPDATED_AT as updatedAt,
@@ -115,5 +115,4 @@
           AND DELETED = 0
         ORDER BY PRODUCT_NAME ASC
     </select>
-    
 </mapper>

@@ -5,6 +5,8 @@ import ProductAdd from '../views/ProductAdd.vue';
 import CustomerAdd from '../views/CustomerAdd.vue';
 import OrderAdd from '../views/OrderAdd.vue';
 import ProductList from '../views/ProductList.vue';
+import CustomerList from '../views/CustomerList.vue';
+import OrderList from '../views/OrderList.vue';
 import Header from '../components/Header.vue';
 import NotFound from '../views/NotFound.vue';
 
@@ -15,6 +17,8 @@ const routes = [
   { path: '/customer/add', component: CustomerAdd },
   { path: '/order/add', component: OrderAdd },
   { path: '/product/list', component: ProductList },
+  { path: '/customer/list', component: CustomerList },
+  { path: '/order/list', component: OrderList },
   { path: '/header', component: Header },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }
 ];

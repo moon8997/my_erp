@@ -70,7 +70,7 @@
               <i class="fas fa-box"></i> 주문 상품 <span class="req">*</span>
             </span>
             <button type="button" class="btn add" @click="addItem">
-              <i class="fas fa-plus"></i> 상품 추가
+              <i class="fas fa-plus"></i> 추가
             </button>
           </div>
 
@@ -104,7 +104,7 @@
 
               <div class="field">
                 <label class="label" :for="`quantity-${idx}`">
-                  <i class="fas fa-hashtag"></i> 갯수
+                  수량
                 </label>
                 <input
                   :id="`quantity-${idx}`"
@@ -117,7 +117,7 @@
 
               <div class="field">
                 <label class="label" :for="`price-${idx}`">
-                  <i class="fas fa-won-sign"></i> 가격
+                  가격
                 </label>
                 <input
                   :id="`price-${idx}`"
@@ -127,7 +127,7 @@
                 />
               </div>
               <button type="button" class="btn remove" @click="removeItem(idx)">
-                <i class="fas fa-trash-alt"></i> 삭제
+                <i class="fas fa-trash-alt"></i>
               </button>
             </div>
           </div>
@@ -265,10 +265,12 @@ const submitOrder = async () => {
     const payload = {
       customerName: form.value.customerName,
       saleDate: form.value.saleDate,
-      items: form.value.items.map((it) => ({
-        productName: it.productName,
-        quantity: it.quantity,
-      })),
+      items: form.value.items
+        .filter(it => it.productName && it.productName.trim() !== '')
+        .map((it) => ({
+          productName: it.productName,
+          quantity: it.quantity,
+        })),
     };
     const res = await axios.post('/sales', payload);
     if (res.data && res.data.success) {
@@ -295,14 +297,18 @@ const allProducts = ref([]); // 가격 정보를 포함한 전체 상품 데이�
 
 onMounted(async () => {
   try {
-    // 고객 목록 가져오기
+    // 고객 목록과 상품 정보 가져오기
     const bootstrapRes = await axios.get('/lookup/bootstrap');
-    allCustomerNames.value = Array.isArray(bootstrapRes.data?.customers) ? bootstrapRes.data.customers : [];
-    
-    // 상품 목록과 가격 정보 가져오기
-    const productsRes = await axios.get('/products');
-    allProducts.value = Array.isArray(productsRes.data) ? productsRes.data : [];
-    allProductNames.value = allProducts.value.map(p => p.productName);
+    if (bootstrapRes.data.success) {
+      // 고객 목록 설정
+      allCustomerNames.value = Array.isArray(bootstrapRes.data.customers) ? bootstrapRes.data.customers : [];
+      
+      // 상품 정보 설정
+      allProducts.value = Array.isArray(bootstrapRes.data.products) ? bootstrapRes.data.products : [];
+      allProductNames.value = allProducts.value.map(p => p.productName);
+    } else {
+      console.error('데이터 로딩 실패:', bootstrapRes.data);
+    }
     
     // 초성 캐시 계산
     customerChosungs.value = allCustomerNames.value.map(getChosung);

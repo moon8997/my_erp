@@ -35,6 +35,20 @@
           AND DELETED = 0
     </select>
     
+    <select id="findByCompanyName" parameterType="string" resultType="com.myproject.caseNara.model.Customer">
+        SELECT 
+            CUSTOMER_ID as customerId,
+            COMPANY_NAME as companyName,
+            PHONE as phone,
+            ADDRESS as address,
+            CREATED_AT as createdAt,
+            UPDATED_AT as updatedAt,
+            DELETED as deleted
+        FROM CUSTOMERS
+        WHERE COMPANY_NAME = #{companyName}
+          AND DELETED = 0
+    </select>
+
     <select id="listCompanyNamesLike" parameterType="string" resultType="string">
         SELECT COMPANY_NAME
         FROM CUSTOMERS
@@ -49,5 +63,55 @@
         WHERE DELETED = 0
         ORDER BY COMPANY_NAME ASC
     </select>
+
+    <!-- 모든 고객 조회 -->
+    <select id="getAllCustomers" resultType="com.myproject.caseNara.model.Customer">
+        SELECT 
+            CUSTOMER_ID as customerId,
+            COMPANY_NAME as companyName,
+            PHONE as phone,
+            ADDRESS as address,
+            CREATED_AT as createdAt,
+            UPDATED_AT as updatedAt,
+            DELETED as deleted
+        FROM CUSTOMERS
+        WHERE DELETED = 0
+        ORDER BY COMPANY_NAME ASC
+    </select>
+
+    <!-- ID로 고객 조회 -->
+    <select id="getCustomerById" parameterType="long" resultType="com.myproject.caseNara.model.Customer">
+        SELECT 
+            CUSTOMER_ID as customerId,
+            COMPANY_NAME as companyName,
+            PHONE as phone,
+            ADDRESS as address,
+            CREATED_AT as createdAt,
+            UPDATED_AT as updatedAt,
+            DELETED as deleted
+        FROM CUSTOMERS
+        WHERE CUSTOMER_ID = #{customerId}
+          AND DELETED = 0
+    </select>
+
+    <!-- 고객 정보 수정 -->
+    <update id="updateCustomer" parameterType="com.myproject.caseNara.model.Customer">
+        UPDATE CUSTOMERS
+        SET 
+            COMPANY_NAME = #{companyName,jdbcType=VARCHAR},
+            PHONE = #{phone,jdbcType=VARCHAR},
+            ADDRESS = #{address,jdbcType=VARCHAR}
+        WHERE CUSTOMER_ID = #{customerId}
+          AND DELETED = 0
+    </update>
+
+    <!-- 고객 삭제 (soft delete) -->
+    <update id="deleteCustomer" parameterType="long">
+        UPDATE CUSTOMERS
+        SET 
+            DELETED = 1
+        WHERE CUSTOMER_ID = #{customerId}
+          AND DELETED = 0
+    </update>   
 
 </mapper>

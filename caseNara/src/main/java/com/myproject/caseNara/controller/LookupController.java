@@ -24,7 +24,7 @@ public class LookupController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "customers", lookupService.getAllCustomerNames(),
-                "products", lookupService.getAllProductNames()
+                "products", lookupService.getAllProduct()
         ));
     }
 

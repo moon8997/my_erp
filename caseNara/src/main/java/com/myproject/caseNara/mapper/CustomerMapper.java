@@ -8,8 +8,19 @@ import java.util.List;
 
 @Mapper
 public interface CustomerMapper {
-    int insertCustomer(Customer customer);
+    List<Customer> getAllCustomers();
+    
+    Customer getCustomerById(Long customerId);
+    
     Customer findByCompanyName(String companyName);
+    
+    int insertCustomer(Customer customer);
+    
+    int updateCustomer(Customer customer);
+    
+    int deleteCustomer(Long customerId);
+    
     List<String> listCompanyNamesLike(@Param("query") String query);
+    
     List<String> listAllCompanyNames();
 }

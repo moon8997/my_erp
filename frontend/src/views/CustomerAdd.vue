@@ -111,7 +111,7 @@ export default {
       
       submitting.value = true
       try {
-        const response = await axios.post('/api/customers', {
+        const response = await axios.post('/api/customers/add', {
           companyName: form.value.company,
           phone: form.value.phone,
           address: form.value.address
@@ -119,12 +119,11 @@ export default {
 
         if (response.data) {
           showToast('거래처가 성공적으로 등록되었습니다')
-          router.push('/customer/list')
         }
       } catch (error) {
         console.error('거래처 등록 실패:', error)
         if (error.response?.status === 409) {
-          showToast('이미 존재하는 상호명입니다')
+          showToast('이미 등록된 상호명입니다')
         } else {
           showToast('거래처 등록에 실패했습니다')
         }

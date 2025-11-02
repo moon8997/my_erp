@@ -60,28 +60,28 @@
         <!-- 가격 정보 -->
         <div class="row" style="grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="row">
-            <label class="label" for="sellingPrice">
+            <label class="label" for="price">
               <i class="fas fa-won-sign"></i> 판매가격
             </label>
             <div class="field">
               <input 
-                id="sellingPrice"
+                id="price"
                 type="number" 
-                v-model.number="form.sellingPrice" 
+                v-model.number="form.price" 
                 placeholder="판매가격을 입력하세요"
               />
             </div>
           </div>
           
           <div class="row">
-            <label class="label" for="costPrice">
+            <label class="label" for="cost">
               <i class="fas fa-coins"></i> 원가
             </label>
             <div class="field">
               <input 
-                id="costPrice"
+                id="cost"
                 type="number" 
-                v-model.number="form.costPrice" 
+                v-model.number="form.cost" 
                 placeholder="원가를 입력하세요"
               />
             </div>
@@ -91,14 +91,14 @@
         <!-- 진열 위치와 공급처 -->
         <div class="row" style="grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="row">
-            <label class="label" for="displayLocation">
+            <label class="label" for="location">
               <i class="fas fa-map-marker-alt"></i> 진열 위치
             </label>
             <div class="field">
               <input 
-                id="displayLocation"
+                id="location"
                 type="text" 
-                v-model.trim="form.displayLocation" 
+                v-model.trim="form.location" 
                 placeholder="진열 위치를 입력하세요"
               />
             </div>
@@ -120,13 +120,13 @@
         </div>
         
         <!-- 버튼 -->
-        <div class="row" style="margin-top: 16px;">
+        <div class="row" style="margin-top: 3px;">
           <div class="actions">
             <button type="button" class="btn" @click="$router.back()">
               <i class="fas fa-times"></i> 취소
             </button>
-            <button type="submit" class="btn primary">
-              <i class="fas fa-check"></i> 저장
+            <button type="submit" class="btn primary" :disabled="submitting || isCheckingDuplicate">
+              <i class="fas fa-check"></i> {{ submitting ? '저장 중...' : '저장' }}
             </button>
           </div>
         </div>
@@ -141,7 +141,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import './styles/common.css'
@@ -150,16 +150,21 @@ export default {
   name: 'ProductAdd',
   setup() {
     const router = useRouter()
-    const fileInput = ref(null)
-    const preview = ref(null)
-    const form = ref({
-      name: '',
-      sellingPrice: null,
-      costPrice: null,
-      displayLocation: '',
-      supplier: '',
-      imageFile: null
+    const form = reactive({ 
+      name: '', 
+      price: null, 
+      cost: null, 
+      supplier: '', 
+      location: '', 
+      imageFile: null 
     })
+    
+    const preview = ref('') 
+    const submitting = ref(false) 
+    const fileInput = ref(null) 
+    const isCheckingDuplicate = ref(false) 
+    const duplicateCheckTimer = ref(null) 
+    const loading = ref(false)
     const toast = ref({ show: false, message: '' })
 
     const showToast = (message) => {
@@ -170,68 +175,114 @@ export default {
       }, 3000)
     }
 
-    const triggerFileInput = () => {
-      fileInput.value.click()
-    }
+    function triggerFileInput() { 
+      fileInput.value.click() 
+    } 
 
-    const onFileChange = (event) => {
-      const file = event.target.files[0]
-      if (!file) return
+    // 상품명 중복 검사 함수 
+    async function checkDuplicateProductName(productName) { 
+      if (!productName || productName.trim().length === 0) { 
+        return false 
+      } 
+      
+      try { 
+        isCheckingDuplicate.value = true 
+        const response = await axios.get('/api/products/check-duplicate', { 
+          params: { productName: productName.trim() } 
+        }) 
+        
+        if (response.data && response.data.success) { 
+          return response.data.isDuplicate 
+        } 
+        return false 
+      } catch (error) { 
+        console.error('중복 검사 중 오류:', error) 
+        showToast('중복 검사 중 오류가 발생했습니다.') 
+        return false 
+      } finally { 
+        isCheckingDuplicate.value = false 
+      } 
+    } 
 
-      if (!['image/jpeg', 'image/png'].includes(file.type)) {
-        showToast('JPG 또는 PNG 파일만 업로드 가능합니다')
-        return
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        showToast('파일 크기는 10MB를 초과할 수 없습니다')
-        return
-      }
-
-      form.value.imageFile = file
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        preview.value = e.target.result
-      }
-      reader.readAsDataURL(file)
+    function onFileChange(e) { 
+      const file = e.target.files?.[0] 
+      if (!file) return 
+      
+      // 파일 크기 체크 (10MB 제한) 
+      if (file.size > 10 * 1024 * 1024) { 
+        showToast('파일 크기는 10MB를 초과할 수 없습니다.') 
+        return 
+      } 
+      
+      // 이미지 파일 타입 체크 
+      if (!file.type.match('image/jpeg') && !file.type.match('image/png')) { 
+        showToast('JPG 또는 PNG 파일만 업로드 가능합니다.') 
+        return 
+      } 
+      
+      form.imageFile = file 
+      
+      // 이미지 미리보기 생성 
+      const reader = new FileReader() 
+      reader.onload = (e) => { 
+        preview.value = String(reader.result || '') 
+      } 
+      reader.readAsDataURL(file)   
     }
 
     const onSubmit = async () => {
-      // 상품명 필수 체크
-      if (!form.value.name.trim()) {
-        showToast('상품명은 필수 입력 항목입니다')
+      // 제출 전 중복 검사
+      const isDuplicate = await checkDuplicateProductName(form.name)
+      if (isDuplicate) {
+        showToast('이미 존재하는 상품명입니다. 다른 이름을 사용해주세요.', 'error')
         return
       }
 
+      if (loading.value) return
+      loading.value = true
+    
       try {
-        const formData = new FormData()
-        formData.append('name', form.value.name)
-        if (form.value.sellingPrice) {
-          formData.append('sellingPrice', form.value.sellingPrice)
-        }
-        if (form.value.costPrice) {
-          formData.append('costPrice', form.value.costPrice)
-        }
-        if (form.value.displayLocation) {
-          formData.append('displayLocation', form.value.displayLocation)
-        }
-        if (form.value.supplier) {
-          formData.append('supplier', form.value.supplier)
-        }
-        if (form.value.imageFile) {
-          formData.append('image', form.value.imageFile)
-        }
-
-        await axios.post('/api/products', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
+        // 이미지 업로드
+        let imageUrl = ''
+        if (form.imageFile) {
+          const formData = new FormData()
+          formData.append('image', form.imageFile)
+          
+          const imageResponse = await axios.post('/api/products/upload-image', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+    
+          if (!imageResponse.data.success) {
+            throw new Error('이미지 업로드 실패')
           }
-        })
-
-        router.push('/product/list')
+          imageUrl = imageResponse.data.imageUrl
+        }
+        
+        // 상품 데이터 생성
+        const productData = {
+          productName: form.name,
+          salePrice: form.price,
+          costPrice: form.cost,
+          supplier: form.supplier,
+          displayLocation: form.location,
+          imageUrl: imageUrl
+        }
+    
+        // 상품 등록
+        const response = await axios.post('/api/products/add', productData)
+        
+        if (response.data.success) {
+          showToast('상품이 성공적으로 등록되었습니다')
+          // router.push('/product/list')
+        } else {
+          throw new Error(response.data.message || '상품 등록 실패')
+        }
       } catch (error) {
-        console.error('상품 등록 실패:', error)
-        showToast('상품 등록에 실패했습니다')
+        showToast(error.message || '상품 등록 중 오류가 발생했습니다', 'error')
+      } finally {
+        loading.value = false
       }
     }
 
@@ -240,6 +291,8 @@ export default {
       preview,
       form,
       toast,
+      submitting,
+      isCheckingDuplicate,
       triggerFileInput,
       onFileChange,
       onSubmit
@@ -274,7 +327,7 @@ export default {
   padding: 24px;
 }
 
-.form { display: grid; gap: 16px; }
+.form { display: grid; gap: 15px; }
 
 .row { display: grid; gap: 8px; }
 .label { font-size: 14px; color: #0a0a0a; }
@@ -315,6 +368,11 @@ export default {
   max-width: 320px;
 }
 
+@media (max-width: 768px) {
+  .image-upload-container {
+    max-width: 213px;  /* 320px * (2/3) ≈ 213px */
+  }
+}
 .image-upload-area {
   width: 100%;
   aspect-ratio: 1;

@@ -21,6 +21,6 @@ public class Product {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean deleted;
-    private Long supplierId;
+    private String supplier;
     private String displayLocation;
 }
