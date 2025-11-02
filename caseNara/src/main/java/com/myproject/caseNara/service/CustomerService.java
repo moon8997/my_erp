@@ -126,7 +126,7 @@ public class CustomerService {
      * @throws RuntimeException 고객을 찾을 수 없는 경우
      */
     public void deleteCustomer(Long customerId) {
-        Customer customer = getCustomerById(customerId);
+        getCustomerById(customerId);
         customerMapper.deleteCustomer(customerId);
         if (lookupService != null) {
             lookupService.invalidateCustomers();

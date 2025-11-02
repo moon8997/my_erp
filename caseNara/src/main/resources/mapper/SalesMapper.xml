@@ -25,6 +25,24 @@
         )
     </insert>
 
+    <!-- 상호명 기준 인기 상품 Top 5 -->
+    <select id="listTopProductNamesByCompanyName" parameterType="string" resultType="string">
+        SELECT PRODUCT_NAME
+        FROM (
+            SELECT p.PRODUCT_NAME AS PRODUCT_NAME, COUNT(1) AS CNT
+            FROM SALES s
+            JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
+            JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
+            WHERE c.COMPANY_NAME = #{companyName}
+              AND NVL(s.DELETED, 0) = 0
+              AND NVL(p.DELETED, 0) = 0
+              AND NVL(c.DELETED, 0) = 0
+            GROUP BY p.PRODUCT_NAME
+            ORDER BY CNT DESC
+        )
+        WHERE ROWNUM &lt;= 5
+    </select>
+
     <!-- 주문 목록 조회 -->
     <select id="listSales" resultType="com.myproject.caseNara.model.Sale">
         SELECT 
@@ -45,6 +63,42 @@
         WHERE NVL(s.DELETED, 0) = 0
           AND NVL(c.DELETED, 0) = 0
           AND NVL(p.DELETED, 0) = 0
+          <if test="searchQuery != null and searchQuery != ''">
+            AND (
+                LOWER(c.COMPANY_NAME) LIKE LOWER('%'||#{searchQuery}||'%')
+                OR LOWER(p.PRODUCT_NAME) LIKE LOWER('%'||#{searchQuery}||'%')
+            )
+          </if>
+          <if test="startDate != null">
+            AND s.SALE_AT &gt;= #{startDate}
+          </if>
+          <if test="endDate != null">
+            AND s.SALE_AT &lt;= #{endDate}
+          </if>
+        ORDER BY s.SALE_AT DESC
+    </select>
+
+    <!-- 특정 날짜의 주문 목록 조회 -->
+    <select id="listSalesByDate" resultType="com.myproject.caseNara.model.Sale">
+        SELECT 
+            s.SALE_ID,
+            s.CUSTOMER_ID,
+            s.PRODUCT_ID,
+            s.QUANTITY,
+            s.UNIT_PRICE,
+            s.SALE_AT,
+            s.CREATED_AT,
+            s.UPDATED_AT,
+            c.COMPANY_NAME as customerName,
+            p.PRODUCT_NAME as productName,
+            p.SALE_PRICE as productPrice
+        FROM SALES s
+        JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
+        JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
+        WHERE NVL(s.DELETED, 0) = 0
+          AND NVL(c.DELETED, 0) = 0
+          AND NVL(p.DELETED, 0) = 0
+          AND TRUNC(s.SALE_AT) = TRUNC(#{saleDate})
         ORDER BY s.SALE_AT DESC
     </select>
 
