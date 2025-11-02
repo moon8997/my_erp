@@ -1,6 +1,6 @@
 package com.myproject.caseNara.model;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -18,8 +18,13 @@ public class Sale {
     private Long productId;
     private Integer quantity;
     private Integer unitPrice; // NUMBER(18,2)지만 정수 가격 컬럼과 맞추어 Integer 사용
-    private OffsetDateTime saleAt;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private LocalDateTime saleAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private Integer deleted;
+    
+    // 주문 목록 표시를 위한 추가 필드
+    private String customerName;    // 고객사 이름
+    private String productName;     // 상품명
+    private Integer productPrice;   // 상품 가격
 }

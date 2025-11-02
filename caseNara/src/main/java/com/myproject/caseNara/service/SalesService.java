@@ -9,6 +9,7 @@ import com.myproject.caseNara.model.Sale;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -51,7 +52,7 @@ public class SalesService {
             throw new IllegalArgumentException("상호명을 찾을 수 없습니다.");
         }
 
-        OffsetDateTime saleAt = OffsetDateTime.parse(request.saleDate() + "T00:00:00+09:00");
+        LocalDateTime saleAt = LocalDateTime.parse(request.saleDate() + "T00:00:00");
 
         int inserted = 0;
         for (CreateOrderItem item : request.items()) {
@@ -83,5 +84,17 @@ public class SalesService {
      */
     public List<String> getTopProductsByCompanyName(String companyName) {
         return salesMapper.listTopProductNamesByCompanyName(companyName);
+    }
+    
+    /**
+     * 판매 목록을 조회합니다.
+     * 날짜가 지정되지 않으면 전체 목록을, 지정된 경우 해당 기간의 목록을 반환합니다.
+     *
+     * @param startDate 시작 날짜 (선택)
+     * @param endDate 종료 날짜 (선택)
+     * @return 판매 목록
+     */
+    public List<Sale> listSales(String startDate, String endDate) {
+        return salesMapper.listSales(startDate, endDate);
     }
 }

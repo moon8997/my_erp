@@ -26,7 +26,15 @@
             <i class="far fa-calendar-alt"></i>
             기간 선택
           </button>
-          <!-- Date picker component will be added here -->
+          <div v-if="showDatePicker" class="date-picker-container">
+            <DatePicker
+              v-model:value="dateRange"
+              range
+              :format="'YYYY-MM-DD'"
+              :placeholder="'날짜를 선택하세요'"
+              @change="handleDateChange"
+            />
+          </div>
         </div>
       </div>
 
@@ -74,10 +82,28 @@ export default {
     const router = useRouter()
     const searchQuery = ref('')
     const response = ref(null)
-    const selectedDateRange = ref({
-      start: new Date().toISOString().split('T')[0],
-      end: new Date().toISOString().split('T')[0]
-    })
+    const showDatePicker = ref(false)
+    const dateRange = ref([])
+    // 오늘 날짜 가져오기 (서울 시간 기준)
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+
+    // 날짜 문자열로 변환 (YYYY-MM-DD)
+    const startOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const endOfDay = startOfDay; // 하루 조회 시 start = end
+
+    // 선택한 날짜 범위
+    const selectedDateRange = ref({ start: startOfDay, end: endOfDay });
+
+    console.log(selectedDateRange.value)
+    const toggleDatePicker = () => {
+      showDatePicker.value = !showDatePicker.value
+    }
+    
+    const handleDateChange = async () => {
+      if (dateRange.value && dateRange.value.length === 2) {
+        await fetchOrders()
+      }
+    }
 
     const orders = computed(() => {
       if (!response.value?.data) return []
@@ -128,6 +154,7 @@ export default {
         }
 
         const res = await axios.get('/api/sales', { params })
+        console.log(res.data)
         response.value = res.data
       } catch (error) {
         console.error('Failed to fetch orders:', error)
@@ -154,7 +181,10 @@ export default {
     return {
       searchQuery,
       orders,
-      selectedDateRange,
+      showDatePicker,
+      dateRange,
+      toggleDatePicker,
+      handleDateChange,
       formatDate,
       formatPrice,
       goToAddOrder
@@ -314,6 +344,42 @@ export default {
 
   .product-price {
     align-self: flex-end;
+  }
+  .filter-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .date-filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .date-filter-btn:hover {
+    background-color: #e9ecef;
+  }
+
+  .date-picker-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    margin-top: 5px;
   }
 }
 </style>
