@@ -65,7 +65,31 @@
           AND NVL(p.DELETED, 0) = 0
           AND TRUNC(s.SALE_AT) &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
           AND TRUNC(s.SALE_AT) &lt;= TO_DATE(#{endDate}, 'YYYY-MM-DD')
-        ORDER BY s.SALE_AT DESC
+        ORDER BY s.SALE_AT ASC
     </select>
+
+    <!-- 동일 날짜/고객/상품에 대한 주문 조회 -->
+    <select id="findExistingSale" resultType="com.myproject.caseNara.model.Sale">
+        SELECT 
+            SALE_ID,
+            CUSTOMER_ID,
+            PRODUCT_ID,
+            QUANTITY,
+            UNIT_PRICE,
+            SALE_AT
+        FROM SALES
+        WHERE CUSTOMER_ID = #{customerId}
+          AND PRODUCT_ID = #{productId}
+          AND TRUNC(SALE_AT) = TRUNC(#{saleAt})
+          AND NVL(DELETED, 0) = 0
+    </select>
+
+    <!-- 기존 주문 수량 및 금액 업데이트 -->
+    <update id="updateSaleQuantity">
+        UPDATE SALES
+        SET QUANTITY = QUANTITY + #{additionalQuantity},
+            UNIT_PRICE = UNIT_PRICE + #{additionalPrice}
+        WHERE SALE_ID = #{saleId}
+    </update>
 
 </mapper>

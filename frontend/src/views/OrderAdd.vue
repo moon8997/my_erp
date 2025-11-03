@@ -44,6 +44,7 @@
               id="saleDate"
               v-model="form.saleDate"
               type="date"
+              class="date-input"
             />
           </div>
         </div>
@@ -609,5 +610,20 @@ const insertTopProduct = (name) => {
   box-shadow: 0 6px 18px rgba(0,0,0,.2);
   z-index: 1000;
   font-size: 14px;
+}
+.date-input {
+  width: 100%;
+  -webkit-appearance: none;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
+/* iOS 환경에서 input의 너비를 제한 */
+@supports (-webkit-touch-callout: none) {
+  .date-input {
+    max-width: 100%;
+  }
 }
 </style>

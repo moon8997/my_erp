@@ -22,22 +22,23 @@
           </button>
         </div>
         <div class="filter-container">
-          <button class="btn date-filter-btn" @click="toggleDatePicker">
-            <i class="far fa-calendar-alt"></i>
-            기간 선택
-          </button>
-          <div v-if="showDatePicker" class="date-picker-container">
-            <DatePicker
-              v-model:value="dateRange"
-              range
-              :format="'YYYY-MM-DD'"
-              :placeholder="'날짜를 선택하세요'"
-              @change="handleDateChange"
-            />
+          <div class="date-filter-section">
+            <div class="date-picker-container">
+              <DatePicker
+                  v-model:value="dateRange"
+                  range
+                  :format="'YYYY-MM-DD'"
+                  :default-value="[new Date(), new Date()]"
+                  :placeholder="'YYYY-MM-DD ~ YYYY-MM-DD'"
+                  @change="handleDateChange"
+                  @clear="handleClear"
+                  :editable="false"
+                />
+            </div>
           </div>
         </div>
       </div>
-
+      
       <div class="order-list-content">
         <div v-for="order in orders" :key="`${order.customerName}_${order.orderDate}`" class="order-card">
           <div class="order-header">
@@ -74,65 +75,110 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import DatePicker from 'vue-datepicker-next'
+import 'vue-datepicker-next/index.css'
 import './styles/common.css'
 
 export default {
   name: 'OrderList',
+  components: {
+    DatePicker
+  },
   setup() {
     const router = useRouter()
     const searchQuery = ref('')
     const response = ref(null)
-    const showDatePicker = ref(false)
-    const dateRange = ref([])
-    // 오늘 날짜 가져오기 (서울 시간 기준)
-    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    const dateRange = ref([new Date(), new Date()])
 
+    // 오늘 날짜 가져오기 (서울 시간 기준)
+    const today = new Date()
+    
     // 날짜 문자열로 변환 (YYYY-MM-DD)
-    const startOfDay = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    const endOfDay = startOfDay; // 하루 조회 시 start = end
+    const startOfDay = today.toISOString().split('T')[0]
+    const endOfDay = startOfDay
 
     // 선택한 날짜 범위
-    const selectedDateRange = ref({ start: startOfDay, end: endOfDay });
+    const selectedDateRange = ref({ start: startOfDay, end: endOfDay })
 
-    console.log(selectedDateRange.value)
-    const toggleDatePicker = () => {
-      showDatePicker.value = !showDatePicker.value
+    // 오늘 날짜로 초기화하는 함수
+    const resetToToday = () => {
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+      dateRange.value = [today, today]
+      selectedDateRange.value = { start: todayStr, end: todayStr }
+      return fetchOrders()
+    }
+
+    // clear 버튼 클릭 시 오늘 날짜로 초기화
+    const handleClear = () => {
+      resetToToday()
     }
     
     const handleDateChange = async () => {
       if (dateRange.value && dateRange.value.length === 2) {
+        // 날짜를 YYYY-MM-DD 형식으로 변환 (timezone 고려)
+        const formatToYYYYMMDD = (date) => {
+          const year = date.getFullYear()
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          return `${year}-${month}-${day}`
+        }
+
+        // 선택된 날짜 범위 업데이트
+        selectedDateRange.value = {
+          start: formatToYYYYMMDD(dateRange.value[0]),
+          end: formatToYYYYMMDD(dateRange.value[1])
+        }
         await fetchOrders()
       }
     }
 
     const orders = computed(() => {
-      if (!response.value?.data) return []
+      if (!response.value) return []
 
       // 주문 데이터를 고객명과 주문일자로 그룹화
-      const groupedOrders = response.value.data.reduce((acc, sale) => {
+      const groupedOrders = response.value.reduce((acc, sale) => {
         const key = `${sale.customerName}_${sale.saleAt}`
         if (!acc[key]) {
           acc[key] = {
             customerName: sale.customerName,
             orderDate: sale.saleAt,
-            products: [],
+            products: {},
             totalAmount: 0
           }
         }
         
-        acc[key].products.push({
-          name: sale.productName,
-          quantity: sale.quantity,
-          price: sale.productPrice
-        })
+        // 상품 ID를 키로 사용하여 같은 상품을 하나로 합침
+        const productKey = sale.productId
+        if (!acc[key].products[productKey]) {
+          acc[key].products[productKey] = {
+            name: sale.productName,
+            quantity: 0,
+            price: sale.unitPrice
+          }
+        }
         
-        acc[key].totalAmount += sale.quantity * sale.productPrice
+        acc[key].products[productKey].quantity += sale.quantity
+        acc[key].totalAmount += sale.quantity * sale.unitPrice
         return acc
       }, {})
 
-      // 그룹화된 주문을 배열로 변환하고 날짜순으로 정렬
+      // products 객체를 배열로 변환
+      Object.values(groupedOrders).forEach(order => {
+        order.products = Object.values(order.products)
+      })
+
+      // 그룹화된 주문을 배열로 변환하고 상호명, 날짜순으로 정렬
       return Object.values(groupedOrders)
-        .sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate))
+        .sort((a, b) => {
+          // 먼저 상호명으로 정렬
+          const nameCompare = a.customerName.localeCompare(b.customerName, 'ko')
+          // 상호명이 같은 경우 날짜로 정렬 (오름차순 - 과거가 위로)
+          if (nameCompare === 0) {
+            return new Date(a.orderDate) - new Date(b.orderDate)
+          }
+          return nameCompare
+        })
         .filter(order => {
           // 검색어로 필터링
           if (!searchQuery.value) return true
@@ -166,6 +212,13 @@ export default {
       return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
     }
 
+    const formatDateRange = (start, end) => {
+      if (start === end) {
+        return formatDate(start)
+      }
+      return `${formatDate(start)} ~ ${formatDate(end)}`
+    }
+
     const formatPrice = (price) => {
       return price.toLocaleString('ko-KR') + '원'
     }
@@ -181,11 +234,12 @@ export default {
     return {
       searchQuery,
       orders,
-      showDatePicker,
       dateRange,
-      toggleDatePicker,
+      selectedDateRange,
       handleDateChange,
+      handleClear,
       formatDate,
+      formatDateRange,
       formatPrice,
       goToAddOrder
     }
@@ -194,6 +248,51 @@ export default {
 </script>
 
 <style scoped>
+.filter-container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.date-filter-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.date-picker-container {
+  background-color: white;
+}
+
+.date-filter-section :deep(.mx-datepicker) {
+  width: 280px;
+}
+
+.date-filter-section :deep(.mx-input) {
+  text-align: center;
+  height: 38px;
+  font-size: 14px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+}
+
+.date-filter-section :deep(.mx-input:hover) {
+  border-color: #adb5bd;
+}
+
+.current-date {
+  color: #2c3e50;
+  font-size: 15px;
+  font-weight: 500;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
 .search-container {
   display: flex;
   justify-content: space-between;
@@ -348,38 +447,21 @@ export default {
   .filter-container {
     position: relative;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+    width: 100%;
   }
 
-  .date-filter-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 12px;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+  .date-filter-section {
+    width: 100%;
   }
 
-  .date-filter-btn:hover {
-    background-color: #e9ecef;
+  .date-filter-section :deep(.mx-datepicker) {
+    width: 100%;
   }
 
   .date-picker-container {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 1000;
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 10px;
-    margin-top: 5px;
+    width: 100%;
   }
 }
 </style>

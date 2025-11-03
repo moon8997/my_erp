@@ -34,20 +34,6 @@
         WHERE COMPANY_NAME = #{companyName}
           AND DELETED = 0
     </select>
-    
-    <select id="findByCompanyName" parameterType="string" resultType="com.myproject.caseNara.model.Customer">
-        SELECT 
-            CUSTOMER_ID as customerId,
-            COMPANY_NAME as companyName,
-            PHONE as phone,
-            ADDRESS as address,
-            CREATED_AT as createdAt,
-            UPDATED_AT as updatedAt,
-            DELETED as deleted
-        FROM CUSTOMERS
-        WHERE COMPANY_NAME = #{companyName}
-          AND DELETED = 0
-    </select>
 
     <select id="listCompanyNamesLike" parameterType="string" resultType="string">
         SELECT COMPANY_NAME

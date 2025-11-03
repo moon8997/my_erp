@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @Service
@@ -61,16 +60,34 @@ public class SalesService {
                 throw new IllegalArgumentException("상품을 찾을 수 없습니다: " + item.productName());
             }
 
-            Sale sale = Sale.builder()
-                    .customerId(customer.getCustomerId())
-                    .productId(product.getProductId())
-                    .quantity(item.quantity())
-                    .unitPrice(product.getSalePrice() * item.quantity())
-                    .saleAt(saleAt)
-                    .deleted(0)
-                    .build();
+            // 동일 날짜/고객/상품에 대한 기존 주문 확인
+            Sale existingSale = salesMapper.findExistingSale(
+                customer.getCustomerId(),
+                product.getProductId(),
+                saleAt
+            );
 
-            inserted += salesMapper.insertSale(sale);
+            if (existingSale != null) {
+                // 기존 주문이 있는 경우 수량과 금액 업데이트
+                int additionalPrice = product.getSalePrice() * item.quantity();
+                inserted += salesMapper.updateSaleQuantity(
+                    existingSale.getSaleId(),
+                    item.quantity(),
+                    additionalPrice
+                );
+            } else {
+                // 새로운 주문 생성
+                Sale sale = Sale.builder()
+                        .customerId(customer.getCustomerId())
+                        .productId(product.getProductId())
+                        .quantity(item.quantity())
+                        .unitPrice(product.getSalePrice() * item.quantity())
+                        .saleAt(saleAt)
+                        .deleted(0)
+                        .build();
+
+                inserted += salesMapper.insertSale(sale);
+            }
         }
 
         return inserted;

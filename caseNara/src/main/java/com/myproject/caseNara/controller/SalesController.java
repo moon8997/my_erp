@@ -25,9 +25,10 @@ public class SalesController {
             int inserted = salesService.createOrder(request);
             return ResponseEntity.ok(Map.of("success", true, "inserted", inserted));
         } catch (Exception e) {
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "주문 생성 중 오류가 발생했습니다";
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
-                "message", e.getMessage()
+                "message", errorMessage
             ));
         }
     }
