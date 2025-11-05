@@ -12,6 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Service
@@ -146,6 +149,49 @@ public class ProductService {
             lookupService.invalidateProducts();
         }
         return result;
+    }
+
+    /**
+     * 로컬 uploads 폴더에서 DB에 매핑되지 않은(참조되지 않는) 고아 파일을 삭제합니다.
+     *
+     * @return 삭제된 파일 개수
+     * @throws IOException 파일 처리 중 오류 발생 시
+     */
+    public int cleanupUnmappedLocalUploads() throws IOException {
+        // DB에 저장된 이미지 URL 목록을 수집 (삭제되지 않은 상품만 대상)
+        List<String> urls = productMapper.listAllImageUrls();
+        Set<String> referencedFileNames = urls.stream()
+                .filter(Objects::nonNull)
+                .map(u -> {
+                    String s = u;
+                    // 선행 슬래시 제거
+                    if (s.startsWith("/")) s = s.substring(1);
+                    // /uploads/ 접두사 제거
+                    if (s.startsWith("uploads/")) s = s.substring("uploads/".length());
+                    // 경로에서 파일명만 추출
+                    return Paths.get(s).getFileName().toString();
+                })
+                .collect(Collectors.toSet());
+
+        Path uploadPath = Paths.get("uploads");
+        if (!Files.exists(uploadPath)) {
+            return 0; // 폴더가 없으면 삭제할 것이 없음
+        }
+
+        int deleted = 0;
+        try (var files = Files.list(uploadPath)) {
+            for (Path p : (Iterable<Path>) files::iterator) {
+                if (Files.isRegularFile(p)) {
+                    String name = p.getFileName().toString();
+                    if (!referencedFileNames.contains(name)) {
+                        Files.deleteIfExists(p);
+                        deleted++;
+                    }
+                }
+            }
+        }
+
+        return deleted;
     }
 
 }

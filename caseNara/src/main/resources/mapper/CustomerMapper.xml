@@ -4,7 +4,7 @@
 
     <insert id="insertCustomer" parameterType="com.myproject.caseNara.model.Customer" useGeneratedKeys="true" keyProperty="customerId">
         <selectKey keyProperty="customerId" resultType="long" order="BEFORE">
-            SELECT NVL(MAX(CUSTOMER_ID), 0) + 1 FROM CUSTOMERS
+            SELECT COALESCE(MAX(CUSTOMER_ID), 0) + 1 FROM CUSTOMERS
         </selectKey>
         INSERT INTO CUSTOMERS (
             CUSTOMER_ID,
@@ -39,8 +39,8 @@
         SELECT COMPANY_NAME
         FROM CUSTOMERS
         WHERE DELETED = 0
-          AND COMPANY_NAME LIKE '%' || #{query} || '%'
-          AND ROWNUM &lt;= 10
+          AND COMPANY_NAME LIKE CONCAT('%', #{query}, '%')
+        LIMIT 10
     </select>
 
     <select id="listAllCompanyNames" resultType="string">

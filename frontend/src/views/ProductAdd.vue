@@ -145,6 +145,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import './styles/common.css'
+import { deepClone, resetReactiveToSnapshot } from '../utils/util'
 
 export default {
   name: 'ProductAdd',
@@ -158,6 +159,7 @@ export default {
       location: '', 
       imageFile: null 
     })
+    const initialFormSnapshot = deepClone(form)
     
     const preview = ref('') 
     const submitting = ref(false) 
@@ -275,7 +277,7 @@ export default {
         
         if (response.data.success) {
           showToast('상품 등록 완료')
-          // router.push('/product/list')
+          resetForm()
         } else {
           throw new Error(response.data.message || '상품 등록 실패')
         }
@@ -283,6 +285,20 @@ export default {
         showToast(error.message || '상품 등록 중 오류가 발생했습니다', 'error')
       } finally {
         loading.value = false
+      }
+    }
+
+    // 성공 후 폼 초기화
+    const resetForm = () => {
+      resetReactiveToSnapshot(form, initialFormSnapshot)
+      preview.value = ''
+      if (fileInput.value) {
+        fileInput.value.value = null
+      }
+      isCheckingDuplicate.value = false
+      if (duplicateCheckTimer.value) {
+        clearTimeout(duplicateCheckTimer.value)
+        duplicateCheckTimer.value = null
       }
     }
 

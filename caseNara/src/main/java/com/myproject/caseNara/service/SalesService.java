@@ -230,8 +230,13 @@ public class SalesService {
      * 나머지 활성/삭제 레코드는 하드 삭제합니다.
      */
     public void mergeDuplicateItems(Long saleId, Long productId) {
-        // 대표 활성 행에 합계 반영
-        salesMapper.mergeActiveCanonicalRow(saleId, productId);
+        // 대표 활성 행에 합계 반영 (MYSQL 호환 방식)
+        java.util.Map<String, java.math.BigDecimal> sums = salesMapper.sumActiveSaleProduct(saleId, productId);
+        java.math.BigDecimal qtyBd = (sums != null) ? sums.get("totalQty") : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal priceBd = (sums != null) ? sums.get("totalPrice") : java.math.BigDecimal.ZERO;
+        Integer totalQty = (qtyBd != null) ? qtyBd.intValue() : 0;
+        Integer totalPrice = (priceBd != null) ? priceBd.intValue() : 0;
+        salesMapper.updateCanonicalRowWithAggregates(saleId, productId, totalQty, totalPrice);
         // 대표 행 외 활성 중복 하드 삭제
         salesMapper.deleteOtherActiveDuplicates(saleId, productId);
         // 삭제된 레코드도 모두 제거하여 향후 제약 충돌 방지

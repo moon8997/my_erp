@@ -63,7 +63,7 @@
                 <p class="product-quantity">수량: {{ product.quantity }}개</p>
               </div>
               <div class="product-actions">
-                <p class="product-price">{{ formatPrice(product.price * product.quantity) }}</p>
+                <p class="product-price">{{ formatPrice(product.price) }}</p>
                 <button class="btn delete-btn" @click="deleteProduct(order, product)" text-size="small">
                   <i class="fas fa-trash-alt"></i>
                 </button>
@@ -194,7 +194,7 @@ export default {
         }
 
         acc[key].products[productKey].quantity += sale.quantity
-        acc[key].totalAmount += sale.quantity * sale.unitPrice
+        acc[key].totalAmount += sale.unitPrice
         return acc
       }, {})
 

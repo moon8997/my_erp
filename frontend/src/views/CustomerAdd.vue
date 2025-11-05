@@ -77,6 +77,7 @@
 
 <script>
 import { ref } from 'vue'
+import { deepClone, resetRefToSnapshot } from '../utils/util'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import './styles/common.css'
@@ -90,6 +91,7 @@ export default {
       phone: '',
       address: ''
     })
+    const initialFormSnapshot = deepClone(form.value)
     const submitting = ref(false)
     const toast = ref({ show: false, message: '' })
 
@@ -119,6 +121,7 @@ export default {
 
         if (response.data) {
           showToast('거래처 등록 완료')
+          resetRefToSnapshot(form, initialFormSnapshot)
         }
       } catch (error) {
         console.error('거래처 등록 실패:', error)

@@ -3,9 +3,12 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.myproject.caseNara.mapper.AccountMapper">
-    <insert id="insertAccount" parameterType="com.myproject.caseNara.model.Account">
+    <insert id="insertAccount" parameterType="com.myproject.caseNara.model.Account" useGeneratedKeys="true" keyProperty="accountSeq">
+        <selectKey keyProperty="accountSeq" resultType="long" order="BEFORE">
+            SELECT COALESCE(MAX(ACCOUNT_SEQ), 0) + 1 FROM ACCOUNT
+        </selectKey>
         INSERT INTO ACCOUNT (ACCOUNT_SEQ, ID, PASSWORD)
-        VALUES ((SELECT NVL(MAX(ACCOUNT_SEQ), 0) + 1 FROM ACCOUNT), #{id}, #{password})
+        VALUES (#{accountSeq}, #{id}, #{password})
     </insert>
     
     <select id="findById" parameterType="string" resultType="com.myproject.caseNara.model.Account">

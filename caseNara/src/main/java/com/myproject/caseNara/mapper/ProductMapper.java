@@ -14,6 +14,7 @@ public interface ProductMapper {
     Product getProductByName(String productName);
     List<String> listProductNamesLike(@Param("query") String query);
     List<String> listAllProductNames();
+    List<String> listAllImageUrls();
     int deleteProduct(Long productId);
     int updateProduct(Product product);
 }

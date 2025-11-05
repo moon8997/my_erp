@@ -38,7 +38,8 @@ public interface SalesMapper {
     int updateSaleDateBySaleId(@Param("saleId") Long saleId, @Param("saleAt") LocalDateTime saleAt);
 
     // 중복 병합: 활성 레코드 집계 후 대표 행 업데이트
-    int mergeActiveCanonicalRow(@Param("saleId") Long saleId, @Param("productId") Long productId);
+    java.util.Map<String, java.math.BigDecimal> sumActiveSaleProduct(@Param("saleId") Long saleId, @Param("productId") Long productId);
+    int updateCanonicalRowWithAggregates(@Param("saleId") Long saleId, @Param("productId") Long productId, @Param("totalQty") Integer totalQty, @Param("totalPrice") Integer totalPrice);
 
     // 중복 활성 레코드 하드 삭제
     int deleteOtherActiveDuplicates(@Param("saleId") Long saleId, @Param("productId") Long productId);

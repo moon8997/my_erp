@@ -134,4 +134,21 @@ public class ProductController {
             ));
         }
     }
+
+    // 로컬 업로드 폴더의 고아 파일 정리
+    @PostMapping("/cleanup-orphan-uploads")
+    public ResponseEntity<?> cleanupOrphanUploads() {
+        try {
+            int deletedCount = productService.cleanupUnmappedLocalUploads();
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "deletedCount", deletedCount
+            ));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "고아 파일 정리 실패: " + e.getMessage()
+            ));
+        }
+    }
 }

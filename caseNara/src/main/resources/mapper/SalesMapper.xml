@@ -4,25 +4,18 @@
 
     <insert id="insertSale" parameterType="com.myproject.caseNara.model.Sale" useGeneratedKeys="true" keyProperty="saleId">
         <selectKey keyProperty="saleId" resultType="long" order="BEFORE">
-            SELECT NVL2(
-                (SELECT SALE_ID
-                 FROM (
-                     SELECT SALE_ID
-                     FROM SALES 
-                     WHERE CUSTOMER_ID = #{customerId} 
-                     AND TRUNC(SALE_AT) = TRUNC(#{saleAt})
-                     AND NVL(DELETED, 0) = 0
-                 ) WHERE ROWNUM = 1),
-                (SELECT SALE_ID
-                 FROM (
-                     SELECT SALE_ID
-                     FROM SALES 
-                     WHERE CUSTOMER_ID = #{customerId} 
-                     AND TRUNC(SALE_AT) = TRUNC(#{saleAt})
-                     AND NVL(DELETED, 0) = 0
-                 ) WHERE ROWNUM = 1),
-                (SELECT NVL(MAX(SALE_ID), 0) + 1 FROM SALES)
-            ) FROM DUAL
+            SELECT COALESCE(
+                (
+                    SELECT SALE_ID FROM SALES 
+                    WHERE CUSTOMER_ID = #{customerId}
+                      AND DATE(SALE_AT) = DATE(#{saleAt})
+                      AND IFNULL(DELETED, 0) = 0
+                    LIMIT 1
+                ),
+                (
+                    SELECT COALESCE(MAX(SALE_ID), 0) + 1 FROM SALES
+                )
+            )
         </selectKey>
         INSERT INTO SALES (
             SALE_ID,
@@ -52,13 +45,13 @@
             JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
             JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
             WHERE c.COMPANY_NAME = #{companyName}
-              AND NVL(s.DELETED, 0) = 0
-              AND NVL(p.DELETED, 0) = 0
-              AND NVL(c.DELETED, 0) = 0
+              AND IFNULL(s.DELETED, 0) = 0
+              AND IFNULL(p.DELETED, 0) = 0
+              AND IFNULL(c.DELETED, 0) = 0
             GROUP BY p.PRODUCT_NAME
             ORDER BY CNT DESC
-        )
-        WHERE ROWNUM &lt;= 5
+        ) t
+        LIMIT 5
     </select>
 
     <!-- 판매 목록 조회 (날짜 기준) -->
@@ -78,11 +71,11 @@
         FROM SALES s
         JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
         JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
-        WHERE NVL(s.DELETED, 0) = 0
-          AND NVL(c.DELETED, 0) = 0
-          AND NVL(p.DELETED, 0) = 0
-          AND TRUNC(s.SALE_AT) &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
-          AND TRUNC(s.SALE_AT) &lt;= TO_DATE(#{endDate}, 'YYYY-MM-DD')
+        WHERE IFNULL(s.DELETED, 0) = 0
+          AND IFNULL(c.DELETED, 0) = 0
+          AND IFNULL(p.DELETED, 0) = 0
+          AND DATE(s.SALE_AT) &gt;= DATE(#{startDate})
+          AND DATE(s.SALE_AT) &lt;= DATE(#{endDate})
         ORDER BY s.SALE_AT ASC
     </select>
 
@@ -98,8 +91,8 @@
         FROM SALES
         WHERE CUSTOMER_ID = #{customerId}
           AND PRODUCT_ID = #{productId}
-          AND TRUNC(SALE_AT) = TRUNC(#{saleAt})
-          AND NVL(DELETED, 0) = 0
+          AND DATE(SALE_AT) = DATE(#{saleAt})
+          AND IFNULL(DELETED, 0) = 0
     </select>
 
     <!-- 기존 주문 수량 및 금액 업데이트 -->
@@ -109,6 +102,7 @@
             UNIT_PRICE = UNIT_PRICE + #{additionalPrice}
         WHERE SALE_ID = #{saleId}
           AND PRODUCT_ID = #{productId}
+          AND IFNULL(DELETED, 0) = 0
     </update>
 
     <!-- 기존 SALE_ID로 신규 항목 추가 -->
@@ -138,26 +132,30 @@
         SET DELETED = 1
         WHERE SALE_ID = #{saleId}
           AND PRODUCT_ID = #{productId}
-          AND NVL(DELETED, 0) = 0
+          AND IFNULL(DELETED, 0) = 0
     </update>
 
-    <!-- 중복 레코드 병합: 활성 레코드 집계 후 대표 행에 반영 -->
-    <update id="mergeActiveCanonicalRow">
-        UPDATE SALES s
-        SET (s.QUANTITY, s.UNIT_PRICE) = (
-            SELECT NVL(SUM(QUANTITY), 0), NVL(SUM(UNIT_PRICE), 0)
-            FROM SALES
-            WHERE SALE_ID = #{saleId}
-              AND PRODUCT_ID = #{productId}
-              AND NVL(DELETED, 0) = 0
-        )
-        WHERE s.ROWID = (
-            SELECT ROWID FROM SALES
-            WHERE SALE_ID = #{saleId}
-              AND PRODUCT_ID = #{productId}
-              AND NVL(DELETED, 0) = 0
-              AND ROWNUM = 1
-        )
+    <!-- 활성 레코드 합계 집계 (MYSQL 호환) -->
+    <select id="sumActiveSaleProduct" resultType="map">
+        SELECT 
+            COALESCE(SUM(QUANTITY), 0) AS totalQty,
+            COALESCE(SUM(UNIT_PRICE), 0) AS totalPrice
+        FROM SALES
+        WHERE SALE_ID = #{saleId}
+          AND PRODUCT_ID = #{productId}
+          AND IFNULL(DELETED, 0) = 0
+    </select>
+
+    <!-- 대표 행에 집계 반영 (단일 테이블 UPDATE + ORDER BY/LIMIT 허용) -->
+    <update id="updateCanonicalRowWithAggregates">
+        UPDATE SALES
+        SET QUANTITY = #{totalQty},
+            UNIT_PRICE = #{totalPrice}
+        WHERE SALE_ID = #{saleId}
+          AND PRODUCT_ID = #{productId}
+          AND IFNULL(DELETED, 0) = 0
+        ORDER BY SALE_AT
+        LIMIT 1
     </update>
 
     <!-- 중복 활성 레코드 제거: 대표 행 제외하고 하드 삭제 -->
@@ -165,13 +163,20 @@
         DELETE FROM SALES
         WHERE SALE_ID = #{saleId}
           AND PRODUCT_ID = #{productId}
-          AND NVL(DELETED, 0) = 0
-          AND ROWID &lt;&gt; (
-            SELECT ROWID FROM SALES
-            WHERE SALE_ID = #{saleId}
-              AND PRODUCT_ID = #{productId}
-              AND NVL(DELETED, 0) = 0
-              AND ROWNUM = 1
+          AND IFNULL(DELETED, 0) = 0
+          AND NOT EXISTS (
+            SELECT 1 FROM (
+              SELECT SALE_ID, PRODUCT_ID, SALE_AT
+              FROM SALES
+              WHERE SALE_ID = #{saleId}
+                AND PRODUCT_ID = #{productId}
+                AND IFNULL(DELETED, 0) = 0
+              ORDER BY SALE_AT
+              LIMIT 1
+            ) keep
+            WHERE keep.SALE_ID = SALES.SALE_ID
+              AND keep.PRODUCT_ID = SALES.PRODUCT_ID
+              AND keep.SALE_AT = SALES.SALE_AT
           )
     </delete>
 
@@ -180,7 +185,7 @@
         DELETE FROM SALES
         WHERE SALE_ID = #{saleId}
           AND PRODUCT_ID = #{productId}
-          AND NVL(DELETED, 0) = 1
+          AND IFNULL(DELETED, 0) = 1
     </delete>
 
     <!-- 동일 SALE_ID의 모든 항목 주문일자 업데이트 -->
@@ -208,8 +213,8 @@
         JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
         JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
         WHERE s.SALE_ID = #{saleId}
-          AND NVL(s.DELETED, 0) = 0
-          AND NVL(c.DELETED, 0) = 0
-          AND NVL(p.DELETED, 0) = 0
+          AND IFNULL(s.DELETED, 0) = 0
+          AND IFNULL(c.DELETED, 0) = 0
+          AND IFNULL(p.DELETED, 0) = 0
     </select>
 </mapper>

@@ -66,3 +66,31 @@ export const formatDate = (date) => {
  * @returns {string} YYYY-MM-DD 형식의 오늘 날짜 문자열
  */
 export const todayStr = () => formatDate(new Date());
+
+/**
+ * 객체를 깊은 복사하여 새 인스턴스로 반환
+ * @param {any} obj
+ * @returns {any}
+ */
+export const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+/**
+ * ref 객체를 스냅샷 값으로 리셋
+ * @param {{ value: any }} refObj - Vue ref 객체
+ * @param {any} snapshot - 초기 스냅샷 값
+ */
+export const resetRefToSnapshot = (refObj, snapshot) => {
+  refObj.value = deepClone(snapshot);
+};
+
+/**
+ * reactive 객체를 스냅샷 값으로 리셋
+ * @param {object} reactiveObj - Vue reactive 객체
+ * @param {any} snapshot - 초기 스냅샷 값
+ */
+export const resetReactiveToSnapshot = (reactiveObj, snapshot) => {
+  const cloned = deepClone(snapshot);
+  for (const key of Object.keys(cloned)) {
+    reactiveObj[key] = cloned[key];
+  }
+};

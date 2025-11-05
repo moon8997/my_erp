@@ -186,9 +186,8 @@ export default {
     const allProducts = ref([]);
     const productChosungs = ref([]);
 
-    // 주문 데이터 초기화
+    // 주문 데이터 초기화 (가격은 상품의 고정 가격으로 동기화)
     const initializeForm = () => {
-      console.log("11")
       if (props.orderData) {
         form.customerName = props.orderData.customerName;
         // 날짜를 YYYY-MM-DD 형식으로 변환
@@ -198,11 +197,22 @@ export default {
         const day = String(date.getDate()).padStart(2, '0');
         form.saleDate = `${year}-${month}-${day}`;
         
+        // 초기에는 수량/상품명만 세팅하고 가격은 동기화 함수에서 설정
         form.items = props.orderData.products.map(p => ({
           productName: p.name,
           quantity: p.quantity,
-          price: p.price
+          price: 0
         }));
+        syncItemPricesFromProducts();
+      }
+    };
+
+    // 상품 목록의 고정 가격(salePrice)로 아이템 가격 동기화
+    const syncItemPricesFromProducts = () => {
+      if (!Array.isArray(form.items) || !Array.isArray(allProducts.value)) return;
+      for (const it of form.items) {
+        const product = allProducts.value.find(p => p.productName === it.productName);
+        it.price = product && typeof product.salePrice === 'number' ? product.salePrice : 0;
       }
     };
 
@@ -214,6 +224,8 @@ export default {
           allProducts.value = Array.isArray(response.data.products) ? response.data.products : [];
           allProductNames.value = allProducts.value.map(p => p.productName);
           productChosungs.value = allProductNames.value.map(getChosung);
+          // 상품 목록 로드 후 가격 동기화
+          syncItemPricesFromProducts();
         }
       } catch (error) {
         console.error('상품 목록 로드 실패:', error);
@@ -311,8 +323,8 @@ export default {
 
 
     // 라이프사이클 훅
-    onMounted(() => {
-      fetchProducts();
+    onMounted(async () => {
+      await fetchProducts();
       // 컴포넌트가 처음 생성될 때 이미 show가 true이거나 orderData가 존재하는 경우 대비
       if (props.show && props.orderData) {
         initializeForm();
@@ -323,6 +335,7 @@ export default {
     watch(() => props.show, (newVal) => {
       if (newVal) {
         initializeForm();
+        syncItemPricesFromProducts();
       }
     });
 
@@ -330,6 +343,7 @@ export default {
     watch(() => props.orderData, (newVal) => {
       if (props.show && newVal) {
         initializeForm();
+        syncItemPricesFromProducts();
       }
     });
 

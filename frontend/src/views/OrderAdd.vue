@@ -170,7 +170,7 @@ import { useRouter } from 'vue-router';
 import axios from '../api/client';
 import './styles/common.css'
 // 유틸리티 함수 임포트
-import { getChosung, filterList, formatDate, todayStr } from '../utils/util';
+import { getChosung, filterList, formatDate, todayStr, resetRefToSnapshot, deepClone } from '../utils/util';
 
 // sales 테이블 컬럼을 참고한 폼 데이터 구조
 // SALE_AT(saleDate), CUSTOMER_ID는 여기서는 상호명으로 입력받고
@@ -188,7 +188,7 @@ const form = ref({
 });
 
 // 초기 폼 스냅샷 (성공 후 기존값으로 복원하기 위함)
-const initialFormSnapshot = JSON.parse(JSON.stringify(form.value));
+const initialFormSnapshot = deepClone(form.value);
 
 const addItem = () => {
   form.value.items.push({ productName: '', quantity: 1, price: 0 });
@@ -237,7 +237,7 @@ const showToast = (msg) => {
 // 성공 후 폼을 기존(초기)값으로 되돌리고 현재 페이지 유지
 const resetFormToInitialValues = () => {
   // 폼 필드 초기화
-  form.value = JSON.parse(JSON.stringify(initialFormSnapshot));
+  resetRefToSnapshot(form, initialFormSnapshot);
 
   // 추천/드롭다운/필터 상태 초기화
   topProducts.value = [];
