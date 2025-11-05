@@ -274,7 +274,7 @@ export default {
         const response = await axios.post('/api/products/add', productData)
         
         if (response.data.success) {
-          showToast('상품이 성공적으로 등록되었습니다')
+          showToast('상품 등록 완료')
           // router.push('/product/list')
         } else {
           throw new Error(response.data.message || '상품 등록 실패')

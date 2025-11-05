@@ -169,6 +169,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from '../api/client';
 import './styles/common.css'
+// 유틸리티 함수 임포트
+import { getChosung, filterList, formatDate, todayStr } from '../utils/util';
 
 // sales 테이블 컬럼을 참고한 폼 데이터 구조
 // SALE_AT(saleDate), CUSTOMER_ID는 여기서는 상호명으로 입력받고
@@ -176,14 +178,6 @@ import './styles/common.css'
 // CREATED_AT/UPDATED_AT은 전송 시점에 세팅, DELETED은 항상 0
 
 const router = useRouter();
-
-function todayStr() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 const form = ref({
   customerName: '',
@@ -416,43 +410,6 @@ const hideProductDropdown = (idx) => {
     }
     ignoreProductBlurValidation[idx] = false;
   }, 150);
-};
-
-// --------- 한글 초성 유틸 및 필터 ----------
-const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
-const HANGUL_BASE = 0xAC00;
-const HANGUL_LAST = 0xD7A3;
-const getChosung = (str) => {
-  if (!str) return '';
-  let out = '';
-  for (const ch of str) {
-    const code = ch.codePointAt(0);
-    if (code >= HANGUL_BASE && code <= HANGUL_LAST) {
-      const idx = Math.floor((code - HANGUL_BASE) / 588);
-      out += CHO[idx] || ch;
-    } else {
-      out += ch;
-    }
-  }
-  return out;
-};
-
-const filterList = (term, names, chosungs) => {
-  const q = term.trim();
-  if (!q) return [];
-  const qLower = q.toLowerCase();
-  const qChosung = getChosung(q);
-  const res = [];
-  for (let i = 0; i < names.length; i++) {
-    const name = names[i];
-    const matchText = name.toLowerCase().includes(qLower);
-    const matchCho = (chosungs[i] || '').includes(qChosung);
-    if (matchText || matchCho) {
-      res.push(name);
-      if (res.length >= 10) break;
-    }
-  }
-  return res;
 };
 
 const insertTopProduct = (name) => {

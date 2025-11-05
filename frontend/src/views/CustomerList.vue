@@ -82,7 +82,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
-import CustomerEditModal from './CustomerEditModal.vue'
+import CustomerEditModal from '../components/CustomerEditModal.vue'
 
 export default {
   name: 'CustomerList',

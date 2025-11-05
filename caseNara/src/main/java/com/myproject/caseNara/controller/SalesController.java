@@ -2,7 +2,7 @@ package com.myproject.caseNara.controller;
 
 import com.myproject.caseNara.model.Sale;
 import com.myproject.caseNara.service.SalesService;
-import com.myproject.caseNara.service.SalesService.CreateOrderRequest;
+import com.myproject.caseNara.service.SalesService.OrderRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,7 @@ public class SalesController {
     private SalesService salesService;
 
     @PostMapping
-    public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<?> createOrder(@RequestBody OrderRequest request) {
         try {
             int inserted = salesService.createOrder(request);
             return ResponseEntity.ok(Map.of("success", true, "inserted", inserted));
@@ -44,5 +44,43 @@ public class SalesController {
             endDate = today.toString();
         }
         return ResponseEntity.ok(salesService.listSales(startDate, endDate));
+    }
+
+
+    @GetMapping("/byId/{saleId}")
+    public ResponseEntity<List<Sale>> getOrderById(@PathVariable Long saleId) {
+        return ResponseEntity.ok(salesService.findSalesById(saleId));
+    }
+
+    @PutMapping("/{saleId}")
+    public ResponseEntity<?> updateOrder(
+            @PathVariable Long saleId,
+            @RequestBody OrderRequest request) {
+        try {
+            salesService.updateOrder(saleId, request);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "주문 수정 중 오류가 발생했습니다";
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", errorMessage
+            ));
+        }
+    }
+
+    @DeleteMapping("/{saleId}/products/{productId}")
+    public ResponseEntity<?> deleteOrderItem(
+            @PathVariable Long saleId,
+            @PathVariable Long productId) {
+        try {
+            salesService.deleteOrderItem(saleId, productId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "주문 항목 삭제 중 오류가 발생했습니다";
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", errorMessage
+            ));
+        }
     }
 }

@@ -97,7 +97,7 @@
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import ProductEditModal from './ProductEditModal.vue'
+import ProductEditModal from '../components/ProductEditModal.vue'
 
 export default {
   name: 'ProductList',

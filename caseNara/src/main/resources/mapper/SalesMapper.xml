@@ -4,7 +4,25 @@
 
     <insert id="insertSale" parameterType="com.myproject.caseNara.model.Sale" useGeneratedKeys="true" keyProperty="saleId">
         <selectKey keyProperty="saleId" resultType="long" order="BEFORE">
-            SELECT NVL(MAX(SALE_ID), 0) + 1 FROM SALES
+            SELECT NVL2(
+                (SELECT SALE_ID
+                 FROM (
+                     SELECT SALE_ID
+                     FROM SALES 
+                     WHERE CUSTOMER_ID = #{customerId} 
+                     AND TRUNC(SALE_AT) = TRUNC(#{saleAt})
+                     AND NVL(DELETED, 0) = 0
+                 ) WHERE ROWNUM = 1),
+                (SELECT SALE_ID
+                 FROM (
+                     SELECT SALE_ID
+                     FROM SALES 
+                     WHERE CUSTOMER_ID = #{customerId} 
+                     AND TRUNC(SALE_AT) = TRUNC(#{saleAt})
+                     AND NVL(DELETED, 0) = 0
+                 ) WHERE ROWNUM = 1),
+                (SELECT NVL(MAX(SALE_ID), 0) + 1 FROM SALES)
+            ) FROM DUAL
         </selectKey>
         INSERT INTO SALES (
             SALE_ID,
@@ -90,6 +108,108 @@
         SET QUANTITY = QUANTITY + #{additionalQuantity},
             UNIT_PRICE = UNIT_PRICE + #{additionalPrice}
         WHERE SALE_ID = #{saleId}
+          AND PRODUCT_ID = #{productId}
     </update>
 
+    <!-- 기존 SALE_ID로 신규 항목 추가 -->
+    <insert id="insertSaleWithId" parameterType="com.myproject.caseNara.model.Sale">
+        INSERT INTO SALES (
+            SALE_ID,
+            CUSTOMER_ID,
+            PRODUCT_ID,
+            QUANTITY,
+            UNIT_PRICE,
+            SALE_AT,
+            DELETED
+        ) VALUES (
+            #{saleId,jdbcType=NUMERIC},
+            #{customerId,jdbcType=NUMERIC},
+            #{productId,jdbcType=NUMERIC},
+            #{quantity,jdbcType=NUMERIC},
+            #{unitPrice,jdbcType=NUMERIC},
+            #{saleAt,jdbcType=TIMESTAMP},
+            0
+        )
+    </insert>
+
+    <!-- 특정 상품을 주문에서 삭제(소프트 삭제) -->
+    <update id="deleteSaleItem">
+        UPDATE SALES
+        SET DELETED = 1
+        WHERE SALE_ID = #{saleId}
+          AND PRODUCT_ID = #{productId}
+          AND NVL(DELETED, 0) = 0
+    </update>
+
+    <!-- 중복 레코드 병합: 활성 레코드 집계 후 대표 행에 반영 -->
+    <update id="mergeActiveCanonicalRow">
+        UPDATE SALES s
+        SET (s.QUANTITY, s.UNIT_PRICE) = (
+            SELECT NVL(SUM(QUANTITY), 0), NVL(SUM(UNIT_PRICE), 0)
+            FROM SALES
+            WHERE SALE_ID = #{saleId}
+              AND PRODUCT_ID = #{productId}
+              AND NVL(DELETED, 0) = 0
+        )
+        WHERE s.ROWID = (
+            SELECT ROWID FROM SALES
+            WHERE SALE_ID = #{saleId}
+              AND PRODUCT_ID = #{productId}
+              AND NVL(DELETED, 0) = 0
+              AND ROWNUM = 1
+        )
+    </update>
+
+    <!-- 중복 활성 레코드 제거: 대표 행 제외하고 하드 삭제 -->
+    <delete id="deleteOtherActiveDuplicates">
+        DELETE FROM SALES
+        WHERE SALE_ID = #{saleId}
+          AND PRODUCT_ID = #{productId}
+          AND NVL(DELETED, 0) = 0
+          AND ROWID &lt;&gt; (
+            SELECT ROWID FROM SALES
+            WHERE SALE_ID = #{saleId}
+              AND PRODUCT_ID = #{productId}
+              AND NVL(DELETED, 0) = 0
+              AND ROWNUM = 1
+          )
+    </delete>
+
+    <!-- 삭제된 레코드 모두 제거: 유니크 충돌 방지용 하드 삭제 -->
+    <delete id="deleteAllDeletedRowsForSaleProduct">
+        DELETE FROM SALES
+        WHERE SALE_ID = #{saleId}
+          AND PRODUCT_ID = #{productId}
+          AND NVL(DELETED, 0) = 1
+    </delete>
+
+    <!-- 동일 SALE_ID의 모든 항목 주문일자 업데이트 -->
+    <update id="updateSaleDateBySaleId">
+        UPDATE SALES
+        SET SALE_AT = #{saleAt,jdbcType=TIMESTAMP}
+        WHERE SALE_ID = #{saleId}
+    </update>
+
+    <!-- 판매 ID로 판매 조회 -->
+    <select id="findSalesById" resultType="com.myproject.caseNara.model.Sale">
+        SELECT 
+            s.SALE_ID,
+            s.CUSTOMER_ID,
+            s.PRODUCT_ID,
+            s.QUANTITY,
+            s.UNIT_PRICE,
+            s.SALE_AT,
+            s.CREATED_AT,
+            s.UPDATED_AT,
+            c.COMPANY_NAME as customerName,
+            p.PRODUCT_NAME as productName,
+            p.SALE_PRICE as productPrice
+        FROM SALES s
+        JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
+        JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
+        WHERE s.SALE_ID = #{saleId}
+          AND NVL(s.DELETED, 0) = 0
+          AND NVL(c.DELETED, 0) = 0
+          AND NVL(p.DELETED, 0) = 0
+    </select>
 </mapper>

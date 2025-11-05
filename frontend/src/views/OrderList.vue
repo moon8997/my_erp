@@ -40,14 +40,19 @@
       </div>
       
       <div class="order-list-content">
-        <div v-for="order in orders" :key="`${order.customerName}_${order.orderDate}`" class="order-card">
+        <div v-for="order in orders" :key="order.saleId || `${order.customerName}_${order.orderDate}`" class="order-card">
           <div class="order-header">
             <div class="order-info">
               <h3>{{ order.customerName }}</h3>
               <p class="order-date">{{ formatDate(order.orderDate) }}</p>
             </div>
-            <div class="order-badge">
-              {{ order.products.length }}개 상품
+            <div class="order-actions">
+              <button class="btn edit-btn" @click="editOrder(order)">
+                <i class="fas fa-edit"></i>
+              </button>
+              <div class="order-badge">
+                {{ order.products.length }}개 상품
+              </div>
             </div>
           </div>
 
@@ -57,7 +62,12 @@
                 <p class="product-name">{{ product.name }}</p>
                 <p class="product-quantity">수량: {{ product.quantity }}개</p>
               </div>
-              <p class="product-price">{{ formatPrice(product.price * product.quantity) }}</p>
+              <div class="product-actions">
+                <p class="product-price">{{ formatPrice(product.price * product.quantity) }}</p>
+                <button class="btn delete-btn" @click="deleteProduct(order, product)" text-size="small">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -68,6 +78,16 @@
         </div>
       </div>
     </div>
+    <div v-if="toast.show" class="toast">{{ toast.message }}</div>
+
+    <!-- 주문 수정 모달 -->
+    <OrderEditModal
+      v-if="showEditModal"
+      :show="showEditModal"
+      :order-data="selectedOrder"
+      @close="closeEditModal"
+      @update="handleOrderUpdate"
+    />
   </div>
 </template>
 
@@ -78,17 +98,30 @@ import axios from 'axios'
 import DatePicker from 'vue-datepicker-next'
 import 'vue-datepicker-next/index.css'
 import './styles/common.css'
+import OrderEditModal from '../components/OrderEditModal.vue'
 
 export default {
   name: 'OrderList',
   components: {
-    DatePicker
+    DatePicker,
+    OrderEditModal
   },
   setup() {
     const router = useRouter()
     const searchQuery = ref('')
     const response = ref(null)
     const dateRange = ref([new Date(), new Date()])
+    const toast = ref({
+      show: false,
+      message: ''
+    })
+
+    // Toast 표시 함수
+    const showToast = (msg) => {
+      toast.value.message = msg;
+      toast.value.show = true;
+      setTimeout(() => { toast.value.show = false; }, 2000);
+    }
 
     // 오늘 날짜 가져오기 (서울 시간 기준)
     const today = new Date()
@@ -136,28 +169,30 @@ export default {
     const orders = computed(() => {
       if (!response.value) return []
 
-      // 주문 데이터를 고객명과 주문일자로 그룹화
+      // 주문 데이터를 saleId로 우선 그룹화하고, 없으면 고객명+주문일자로 그룹화
       const groupedOrders = response.value.reduce((acc, sale) => {
-        const key = `${sale.customerName}_${sale.saleAt}`
+        const key = sale.saleId ?? `${sale.customerName}_${sale.saleAt}`
         if (!acc[key]) {
           acc[key] = {
+            saleId: sale.saleId,
             customerName: sale.customerName,
             orderDate: sale.saleAt,
             products: {},
             totalAmount: 0
           }
         }
-        
+
         // 상품 ID를 키로 사용하여 같은 상품을 하나로 합침
         const productKey = sale.productId
         if (!acc[key].products[productKey]) {
           acc[key].products[productKey] = {
+            productId: sale.productId,
             name: sale.productName,
             quantity: 0,
             price: sale.unitPrice
           }
         }
-        
+
         acc[key].products[productKey].quantity += sale.quantity
         acc[key].totalAmount += sale.quantity * sale.unitPrice
         return acc
@@ -200,7 +235,6 @@ export default {
         }
 
         const res = await axios.get('/api/sales', { params })
-        console.log(res.data)
         response.value = res.data
       } catch (error) {
         console.error('Failed to fetch orders:', error)
@@ -227,9 +261,70 @@ export default {
       router.push('/order/add')
     }
 
+    const showEditModal = ref(false)
+    const selectedOrder = ref(null)
+
+    const editOrder = async (order) => {
+      try {
+        // sale_id로 주문 상세 정보 조회
+        const response = await axios.get(`/api/sales/byId/${order.saleId}`);
+        const saleList = response.data;
+        
+        if (saleList && saleList.length > 0) {
+          // 첫 번째 항목에서 상호명과 주문일자 가져오기
+          const firstSale = saleList[0];
+          
+          // 상품 정보 매핑
+          const products = saleList.map(sale => ({
+            name: sale.productName,
+            quantity: sale.quantity,
+            price: sale.unitPrice
+          }));
+
+          selectedOrder.value = {
+            id: order.saleId,
+            customerName: firstSale.customerName,
+            orderDate: firstSale.saleAt,
+            products: products
+          };
+          
+          showEditModal.value = true;
+        } else {
+          showToast('주문 정보를 찾을 수 없습니다.');
+        }
+      } catch (error) {
+        console.error('Failed to fetch order details:', error);
+        showToast('주문 정보를 불러오는 중 오류가 발생했습니다.');
+      }
+    }
+
+    const deleteProduct = async (order, product) => {
+      if (!confirm(`${product.name} 상품을 삭제하시겠습니까?`)) {
+        return
+      }
+      try {
+        // TODO: API 호출하여 상품 삭제
+        await axios.delete(`/api/sales/${order.saleId}/products/${product.productId}`)
+        await fetchOrders() // 목록 새로고침
+        showToast(`${product.name} 상품이 삭제되었습니다.`)
+      } catch (error) {
+        console.error('Failed to delete product:', error)
+        showToast('상품 삭제 중 오류가 발생했습니다.')
+      }
+    }
+
     onMounted(() => {
       fetchOrders()
     })
+
+    const closeEditModal = () => {
+      showEditModal.value = false
+      selectedOrder.value = null
+    }
+
+    const handleOrderUpdate = () => {
+      fetchOrders() // 목록 새로고침
+    }
 
     return {
       searchQuery,
@@ -241,7 +336,14 @@ export default {
       formatDate,
       formatDateRange,
       formatPrice,
-      goToAddOrder
+      goToAddOrder,
+      showEditModal,
+      selectedOrder,
+      editOrder,
+      deleteProduct,
+      closeEditModal,
+      handleOrderUpdate,
+      toast
     }
   }
 }
@@ -350,6 +452,28 @@ export default {
   margin: 0;
 }
 
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.edit-btn {
+  width: 25px;
+  height: 25px;
+  margin-bottom: 5px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+}
+
+
 .order-badge {
   background: var(--input-bg);
   border-radius: var(--border-radius);
@@ -368,11 +492,19 @@ export default {
   align-items: center;
 }
 
+.product-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .product-name {
   font-size: 14px;
   color: var(--text-color);
   margin: 0;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-quantity {
@@ -381,10 +513,39 @@ export default {
   margin: 0;
 }
 
+.product-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 120px;
+  justify-content: flex-end;
+}
+
 .product-price {
   font-size: 14px;
   color: var(--primary-color);
   margin: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  background-color: var(--danger-color, #000000);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.delete-btn:hover {
+  background-color: var(--danger-dark, #000000);
 }
 
 .order-total {
@@ -427,23 +588,43 @@ export default {
   }
 
   .order-header {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .order-badge {
-    align-self: flex-start;
-  }
-
-  .product-item {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
     align-items: flex-start;
     gap: 8px;
   }
 
-  .product-price {
-    align-self: flex-end;
+  .order-badge {
+    align-self: center;
   }
+
+  .product-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .product-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .product-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .product-actions {
+    flex-shrink: 0;
+  }
+
+  .product-price {
+    text-align: right;
+    white-space: nowrap;
+  }
+
   .filter-container {
     position: relative;
     display: flex;
@@ -464,4 +645,20 @@ export default {
     width: 100%;
   }
 }
+
+/* 토스트 UI */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #3b3c3d;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.2);
+  z-index: 1000;
+  font-size: 14px;
+}
+
 </style>

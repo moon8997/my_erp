@@ -263,7 +263,7 @@ export default {
         const response = await axios.put(`/api/products/${props.productId}`, productData)
         
         if (response.data.success) {
-          showToast('상품이 성공적으로 수정되었습니다')
+          showToast('상품 수정 완료')
           emit('update')
           closeModal()
         } else {

@@ -111,7 +111,7 @@ public class ProductController {
             if (result > 0) {
                 return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "상품이 성공적으로 수정되었습니다"
+                    "message", "상품 수정 완료"
                 ));
             } else {
                 return ResponseEntity.notFound().build();
