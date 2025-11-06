@@ -22,7 +22,8 @@ public class Sale {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer deleted;
-    
+    private Integer billStatus;
+
     // 주문 목록 표시를 위한 추가 필드
     private String customerName;    // 고객사 이름
     private String productName;     // 상품명

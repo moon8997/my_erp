@@ -77,7 +77,7 @@
 
 <script>
 import { ref } from 'vue'
-import { deepClone, resetRefToSnapshot } from '../utils/util'
+// 폼 리셋은 유틸 없이 수동으로 처리합니다
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import './styles/common.css'
@@ -91,7 +91,7 @@ export default {
       phone: '',
       address: ''
     })
-    const initialFormSnapshot = deepClone(form.value)
+    // 스냅샷 사용 없이 기본값으로 직접 리셋합니다
     const submitting = ref(false)
     const toast = ref({ show: false, message: '' })
 
@@ -121,7 +121,8 @@ export default {
 
         if (response.data) {
           showToast('거래처 등록 완료')
-          resetRefToSnapshot(form, initialFormSnapshot)
+          // 기본값으로 직접 초기화
+          form.value = { company: '', phone: '', address: '' }
         }
       } catch (error) {
         console.error('거래처 등록 실패:', error)

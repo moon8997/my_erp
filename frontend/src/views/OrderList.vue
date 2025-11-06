@@ -1,7 +1,10 @@
 <template>
   <div class="page">
-    <div class="page-header">
-      <h1>주문 관리</h1>
+      <div class="page-header">
+      <div class="header-top">
+        <h1>주문 관리</h1>
+        <button class="btn primary payment-prep-btn" @click="goToCollectionPrep">수금준비</button>
+      </div>
       <p class="desc">등록된 주문을 조회하고 관리할 수 있습니다</p>
     </div>
 
@@ -88,23 +91,36 @@
       @close="closeEditModal"
       @update="handleOrderUpdate"
     />
+
+    <!-- 인쇄 전용 영역: A4(가로) 한 장에 영수증 3개 배치 -->
+    <div class="print-area" v-if="showPrint">
+      <div v-for="(page, pIdx) in printPages" :key="pIdx" class="print-page">
+        <div class="print-grid">
+          <div v-for="(receipt, idx) in page" :key="receipt.customerId + '_' + idx" class="receipt-cell">
+            <SampleReceipt :order="receipt" />
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import DatePicker from 'vue-datepicker-next'
 import 'vue-datepicker-next/index.css'
 import './styles/common.css'
 import OrderEditModal from '../components/OrderEditModal.vue'
+import SampleReceipt from './SampleReceipt.vue'
 
 export default {
   name: 'OrderList',
   components: {
     DatePicker,
-    OrderEditModal
+    OrderEditModal,
+    SampleReceipt
   },
   setup() {
     const router = useRouter()
@@ -167,6 +183,7 @@ export default {
     }
 
     const orders = computed(() => {
+      console.log(response.value)
       if (!response.value) return []
 
       // 주문 데이터를 saleId로 우선 그룹화하고, 없으면 고객명+주문일자로 그룹화
@@ -203,16 +220,12 @@ export default {
         order.products = Object.values(order.products)
       })
 
-      // 그룹화된 주문을 배열로 변환하고 상호명, 날짜순으로 정렬
+      // 그룹화된 주문을 배열로 변환하고 날짜(오름차순) 우선, 같은 날짜 내 상호명 정렬
       return Object.values(groupedOrders)
         .sort((a, b) => {
-          // 먼저 상호명으로 정렬
-          const nameCompare = a.customerName.localeCompare(b.customerName, 'ko')
-          // 상호명이 같은 경우 날짜로 정렬 (오름차순 - 과거가 위로)
-          if (nameCompare === 0) {
-            return new Date(a.orderDate) - new Date(b.orderDate)
-          }
-          return nameCompare
+          const dateCompare = new Date(a.orderDate) - new Date(b.orderDate)
+          if (dateCompare !== 0) return dateCompare
+          return a.customerName.localeCompare(b.customerName, 'ko')
         })
         .filter(order => {
           // 검색어로 필터링
@@ -260,6 +273,87 @@ export default {
     const goToAddOrder = () => {
       router.push('/order/add')
     }
+
+    // 인쇄용 데이터
+    const showPrint = ref(false)
+    const printOrders = ref([])
+
+    const goToCollectionPrep = () => {
+      try {
+        const data = response.value || []
+        // 고객별로 items를 유지하면서 그룹화 (CollectionPrep과 동일한 스키마)
+        const grouped = data.reduce((acc, sale) => {
+          const key = sale.customerId
+          if (!acc[key]) {
+            acc[key] = {
+              customerId: sale.customerId,
+              customerName: sale.customerName,
+              orderDate: new Date(),
+              items: [],
+              totalAmount: 0
+            }
+          }
+          acc[key].items.push({
+            saleId: sale.saleId,
+            saleAt: sale.saleAt,
+            productId: sale.productId,
+            productName: sale.productName,
+            quantity: sale.quantity,
+            productPrice: sale.productPrice,
+            unitPrice: sale.unitPrice
+          })
+          acc[key].totalAmount += sale.unitPrice
+          return acc
+        }, {})
+        // 항목이 15개를 넘으면 여러 영수증으로 분할
+        const MAX_ROWS = 15
+        const chunked = []
+        Object.values(grouped).forEach(order => {
+          const items = order.items || []
+          if (items.length === 0) {
+            chunked.push(order)
+            return
+          }
+          // 고객 전체 합계를 각 영수증에 동일하게 표시
+          const customerTotal = items.reduce((sum, it) => sum + Number(it?.unitPrice || 0), 0)
+          const pageCount = Math.ceil(items.length / MAX_ROWS)
+          for (let i = 0; i < items.length; i += MAX_ROWS) {
+            const slice = items.slice(i, i + MAX_ROWS)
+            chunked.push({
+              customerId: order.customerId,
+              customerName: order.customerName,
+              orderDate: order.orderDate,
+              items: slice,
+              totalAmount: customerTotal,
+              receiptPageIndex: Math.floor(i / MAX_ROWS) + 1,
+              receiptPageCount: pageCount
+            })
+          }
+        })
+
+        printOrders.value = chunked
+        showPrint.value = true
+
+        // 렌더 이후 인쇄 트리거
+        nextTick(() => {
+          window.print()
+          // 인쇄 종료 후 영역 숨김
+          setTimeout(() => { showPrint.value = false }, 300)
+        })
+      } catch (e) {
+        console.error('Failed to prepare print data:', e)
+      }
+    }
+
+    // 3개씩 묶어서 페이지 구성
+    const printPages = computed(() => {
+      const pages = []
+      const arr = printOrders.value || []
+      for (let i = 0; i < arr.length; i += 3) {
+        pages.push(arr.slice(i, i + 3))
+      }
+      return pages
+    })
 
     const showEditModal = ref(false)
     const selectedOrder = ref(null)
@@ -337,19 +431,33 @@ export default {
       formatDateRange,
       formatPrice,
       goToAddOrder,
+      goToCollectionPrep,
       showEditModal,
       selectedOrder,
       editOrder,
       deleteProduct,
       closeEditModal,
       handleOrderUpdate,
-      toast
+      toast,
+      showPrint,
+      printPages
     }
   }
 }
 </script>
 
 <style scoped>
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-prep-btn {
+  min-width: 106px;
+  height: 32px;
+}
+
 .filter-container {
   display: flex;
   justify-content: flex-end;
@@ -568,6 +676,20 @@ export default {
   font-weight: 600;
 }
 
+/* 인쇄 레이아웃 */
+.print-area { display: none; }
+.receipt-cell { page-break-inside: avoid; }
+.print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; }
+.print-page { page-break-after: always; }
+
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  /* 일반 화면 요소 숨김 */
+  .page-header, .card, .toast { display: none !important; }
+  /* 인쇄 영역 표시 */
+  .print-area { display: block !important; }
+}
+
 @media (max-width: 768px) {
   .search-container {
     flex-direction: column;
@@ -661,4 +783,28 @@ export default {
   font-size: 14px;
 }
 
+</style>
+
+<!-- 글로벌 인쇄 규칙: 헤더 숨김, 여백 최소화, 영수증만 출력 -->
+<style>
+@media print {
+  @page { size: A4 landscape; margin: 0 0 0 3mm; }
+  html, body { margin: 0; padding: 0; }
+  
+  /* 전체 화면 요소 숨기고 인쇄 영역만 표시 */
+  body * { visibility: hidden !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+
+  /* 전역 헤더(네비게이션) 강제 숨김 */
+  .header-container { display: none !important; }
+
+  /* 페이지 분할 공백 제거 */
+  .print-page { page-break-after: always; }
+  .print-page:last-child { page-break-after: auto; }
+
+  /* 여백/간격 최소화 */
+  .print-grid { gap: 4mm !important; align-content: start; }
+  .receipt-cell { page-break-inside: avoid; break-inside: avoid; margin: 0; padding: 0; }
+}
 </style>

@@ -145,7 +145,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import './styles/common.css'
-import { deepClone, resetReactiveToSnapshot } from '../utils/util'
+// 폼 리셋은 유틸 없이 수동으로 처리합니다
 
 export default {
   name: 'ProductAdd',
@@ -159,7 +159,7 @@ export default {
       location: '', 
       imageFile: null 
     })
-    const initialFormSnapshot = deepClone(form)
+    // 스냅샷 사용 없이 기본값으로 직접 리셋합니다
     
     const preview = ref('') 
     const submitting = ref(false) 
@@ -290,7 +290,14 @@ export default {
 
     // 성공 후 폼 초기화
     const resetForm = () => {
-      resetReactiveToSnapshot(form, initialFormSnapshot)
+      // 수동으로 각 필드를 초기 상태로 되돌립니다
+      form.name = ''
+      form.price = null
+      form.cost = null
+      form.supplier = ''
+      form.location = ''
+      form.imageFile = null
+
       preview.value = ''
       if (fileInput.value) {
         fileInput.value.value = null

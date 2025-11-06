@@ -9,6 +9,9 @@ import CustomerList from '../views/CustomerList.vue';
 import OrderList from '../views/OrderList.vue';
 import Header from '../components/Header.vue';
 import NotFound from '../views/NotFound.vue';
+import ReceiptForm from '../views/ReceiptForm.vue';
+import SampleReceipt from '../views/SampleReceipt.vue';
+import CollectionPrep from '../views/CollectionPrep.vue';
 
 const routes = [
   { path: '/login', component: Login },
@@ -20,6 +23,9 @@ const routes = [
   { path: '/customer/list', component: CustomerList },
   { path: '/order/list', component: OrderList },
   { path: '/header', component: Header },
+  { path: '/receipt', component: ReceiptForm },
+  { path: '/sample', component: SampleReceipt },
+  { path: '/collection/prep', component: CollectionPrep },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound }
 ];
 
