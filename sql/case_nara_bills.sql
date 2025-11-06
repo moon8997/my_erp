@@ -28,7 +28,7 @@ CREATE TABLE `bills` (
   `total_cost` int DEFAULT NULL,
   `remain_cost` int DEFAULT NULL,
   `status` int DEFAULT NULL,
-  `create_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
   PRIMARY KEY (`bill_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -39,6 +39,7 @@ CREATE TABLE `bills` (
 
 LOCK TABLES `bills` WRITE;
 /*!40000 ALTER TABLE `bills` DISABLE KEYS */;
+INSERT INTO `bills` VALUES (1,1,3882,3882,0,'2025-11-06 17:00:45'),(2,2,19780,19780,0,'2025-11-06 17:00:45'),(3,4,3200,3200,0,'2025-11-06 17:00:45'),(4,5,2300,2300,0,'2025-11-06 17:00:45'),(5,7,130,130,0,'2025-11-06 17:00:45');
 /*!40000 ALTER TABLE `bills` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -51,4 +52,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-06 16:58:34
+-- Dump completed on 2025-11-06 17:01:33
