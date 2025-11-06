@@ -278,7 +278,7 @@ export default {
     const showPrint = ref(false)
     const printOrders = ref([])
 
-    const goToCollectionPrep = () => {
+    const goToCollectionPrep = async () => {
       try {
         const data = response.value || []
         // 고객별로 items를 유지하면서 그룹화 (CollectionPrep과 동일한 스키마)
@@ -305,6 +305,26 @@ export default {
           acc[key].totalAmount += sale.unitPrice
           return acc
         }, {})
+        // Bill 생성 API 요청 (고객별 1건)
+        const billRequests = Object.values(grouped).map(order => ({
+          customerId: order.customerId,
+          totalCost: order.totalAmount
+        }))
+        try {
+          if (billRequests.length > 0) {
+            const res = await axios.post('/api/bills', billRequests)
+            if (res?.data?.success) {
+              showToast(`수금 준비용 청구서 생성 완료 (${res.data.inserted}건)`)    
+            } else {
+              showToast(res?.data?.message || '청구서 생성 실패')
+            }
+          } else {
+            showToast('생성할 청구서가 없습니다')
+          }
+        } catch (err) {
+          console.error('Failed to create bills:', err)
+          showToast(err?.response?.data?.message || '청구서 생성 중 오류가 발생했습니다')
+        }
         // 항목이 15개를 넘으면 여러 영수증으로 분할
         const MAX_ROWS = 15
         const chunked = []
