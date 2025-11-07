@@ -46,7 +46,10 @@
         <div v-for="order in orders" :key="order.saleId || `${order.customerName}_${order.orderDate}`" class="order-card">
           <div class="order-header">
             <div class="order-info">
-              <h3>{{ order.customerName }}</h3>
+              <h3>
+                {{ order.customerName }}
+                <i v-if="order.billStatus === 1" class="fas fa-check-circle bill-check-icon" aria-label="billed"></i>
+              </h3>
               <p class="order-date">{{ formatDate(order.orderDate) }}</p>
             </div>
             <div class="order-actions">
@@ -195,8 +198,14 @@ export default {
             customerName: sale.customerName,
             orderDate: sale.saleAt,
             products: {},
-            totalAmount: 0
+            totalAmount: 0,
+            billStatus: Number(sale.billStatus || 0)
           }
+        }
+
+        // 청구 상태 (billStatus)가 하나라도 1이면 카드에 표시
+        if (Number(sale.billStatus || 0) === 1) {
+          acc[key].billStatus = 1
         }
 
         // 상품 ID를 키로 사용하여 같은 상품을 하나로 합침
@@ -280,9 +289,15 @@ export default {
 
     const goToCollectionPrep = async () => {
       try {
-        const data = response.value || []
+        // billStatus가 0인(미청구) 항목만 대상으로 처리
+        const sourceSales = (response.value || []).filter(sale => Number(sale?.billStatus || 0) === 0)
+        if (sourceSales.length === 0) {
+          showToast('영수증을 생성할 미청구 주문이 없습니다')
+          return
+        }
+
         // 고객별로 items를 유지하면서 그룹화 (CollectionPrep과 동일한 스키마)
-        const grouped = data.reduce((acc, sale) => {
+        const grouped = sourceSales.reduce((acc, sale) => {
           const key = sale.customerId
           if (!acc[key]) {
             acc[key] = {
@@ -305,16 +320,22 @@ export default {
           acc[key].totalAmount += sale.unitPrice
           return acc
         }, {})
-        // Bill 생성 API 요청 (고객별 1건)
-        const billRequests = Object.values(grouped).map(order => ({
-          customerId: order.customerId,
-          totalCost: order.totalAmount
-        }))
+        // Bill 생성 API 요청 (고객별 1건) + 매핑용 salesIds 포함
+        const billRequests = Object.values(grouped).map(order => {
+          const salesIdsSet = new Set((order.items || []).map(it => it.saleId).filter(id => id != null))
+          return {
+            customerId: order.customerId,
+            totalCost: order.totalAmount,
+            salesIds: Array.from(salesIdsSet)
+          }
+        })
         try {
           if (billRequests.length > 0) {
             const res = await axios.post('/api/bills', billRequests)
             if (res?.data?.success) {
               showToast(`수금 준비용 청구서 생성 완료 (${res.data.inserted}건)`)    
+              // 청구서 생성 후 상태 반영을 위해 목록 새로고침
+              await fetchOrders()
             } else {
               showToast(res?.data?.message || '청구서 생성 실패')
             }
@@ -574,6 +595,13 @@ export default {
   margin-bottom: 4px;
 }
 
+.bill-check-icon {
+  color: #2ecc71; /* green */
+  font-size: 16px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .order-date {
   font-size: 14px;
   color: var(--text-secondary);
@@ -702,13 +730,7 @@ export default {
 .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; }
 .print-page { page-break-after: always; }
 
-@media print {
-  @page { size: A4 landscape; margin: 10mm; }
-  /* 일반 화면 요소 숨김 */
-  .page-header, .card, .toast { display: none !important; }
-  /* 인쇄 영역 표시 */
-  .print-area { display: block !important; }
-}
+/* (중복 제거) 인쇄 전용 규칙은 아래 글로벌 <style> 블록에서 통합 정의 */
 
 @media (max-width: 768px) {
   .search-container {
@@ -814,10 +836,12 @@ export default {
   /* 전체 화면 요소 숨기고 인쇄 영역만 표시 */
   body * { visibility: hidden !important; }
   .print-area, .print-area * { visibility: visible !important; }
-  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
 
   /* 전역 헤더(네비게이션) 강제 숨김 */
   .header-container { display: none !important; }
+  /* 일반 화면 요소 숨김 (스코프 스타일 내 요소 포함) */
+  .page-header, .card, .toast { display: none !important; }
 
   /* 페이지 분할 공백 제거 */
   .print-page { page-break-after: always; }
@@ -826,5 +850,6 @@ export default {
   /* 여백/간격 최소화 */
   .print-grid { gap: 4mm !important; align-content: start; }
   .receipt-cell { page-break-inside: avoid; break-inside: avoid; margin: 0; padding: 0; }
+  
 }
 </style>

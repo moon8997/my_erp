@@ -1,6 +1,7 @@
 package com.myproject.caseNara.mapper;
 
 import com.myproject.caseNara.model.Bill;
+import com.myproject.caseNara.model.BillWithSales;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -12,4 +13,6 @@ public interface BillMapper {
     List<Bill> listBillsByCustomerId(@Param("customerId") Long customerId);
     int updateRemainCost(@Param("billId") Long billId, @Param("remainCost") Integer remainCost);
     int updateStatus(@Param("billId") Long billId, @Param("status") Integer status);
+    int insertBillSales(@Param("billId") Long billId, @Param("salesIds") List<Long> salesIds);
+    List<BillWithSales> listBillsWithSales();
 }

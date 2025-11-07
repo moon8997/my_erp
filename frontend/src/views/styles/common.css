@@ -169,6 +169,20 @@
   margin-top: 24px;
 }
 
+/* 모달 오픈 시 바깥 페이지 스크롤 및 터치 비활성화 */
+body.modal-open {
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+/* items 컨테이너: 행이 많아질 때 내부 스크롤 */
+.order-add .items,
+.order-edit .items {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
 /* 토스트 메시지 */
 .toast {
   position: fixed;
@@ -212,10 +226,26 @@
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
   }
+  /* 모바일에서 items 높이 축소 */
+  .order-add .items,
+  .order-edit .items {
+    max-height: 300px;
+  }
+  /* OrderEditModal: 모바일에서 상품명/수량/가격/삭제 버튼 한 줄 배치 */
+  .modal-content .items .item {
+    display: grid;
+    grid-template-columns: 1.6fr 0.9fr 1fr 36px;
+    gap: 8px;
+    align-items: end;
+  }
+  /* 모바일에서는 라벨 숨김으로 입력칸만 노출 */
+  .modal-content .items .item .label {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 }

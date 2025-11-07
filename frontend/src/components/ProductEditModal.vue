@@ -145,8 +145,9 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
+import '../views/styles/common.css'
 
 export default {
   name: 'ProductEditModal',
@@ -286,14 +287,22 @@ export default {
 
     onMounted(() => {
       if (props.show) {
+        document.body.classList.add('modal-open')
         fetchProductData()
       }
     })
 
     watch(() => props.show, (newVal) => {
       if (newVal) {
+        document.body.classList.add('modal-open')
         fetchProductData()
+      } else {
+        document.body.classList.remove('modal-open')
       }
+    })
+
+    onUnmounted(() => {
+      document.body.classList.remove('modal-open')
     })
 
     return {
@@ -395,9 +404,10 @@ export default {
 }
 
 .actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 /* 이미지 업로드 스타일 */
@@ -487,18 +497,4 @@ export default {
   font-size: 14px;
 }
 
-@media (max-width: 480px) {
-  .modal-content {
-    width: 95%;
-    max-height: 95vh;
-  }
-
-  .modal-body {
-    padding: 16px;
-  }
-
-  .row[style*="grid-template-columns"] {
-    grid-template-columns: 1fr !important;
-  }
-}
 </style>

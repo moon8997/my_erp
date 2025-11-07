@@ -7,6 +7,7 @@ import OrderAdd from '../views/OrderAdd.vue';
 import ProductList from '../views/ProductList.vue';
 import CustomerList from '../views/CustomerList.vue';
 import OrderList from '../views/OrderList.vue';
+import BillList from '../views/BillList.vue';
 import Header from '../components/Header.vue';
 import NotFound from '../views/NotFound.vue';
 import ReceiptForm from '../views/ReceiptForm.vue';
@@ -22,6 +23,7 @@ const routes = [
   { path: '/product/list', component: ProductList },
   { path: '/customer/list', component: CustomerList },
   { path: '/order/list', component: OrderList },
+  { path: '/bill', component: BillList },
   { path: '/header', component: Header },
   { path: '/receipt', component: ReceiptForm },
   { path: '/sample', component: SampleReceipt },

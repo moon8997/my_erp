@@ -74,8 +74,9 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
+import '../views/styles/common.css'
 
 export default {
   name: 'CustomerEditModal',
@@ -179,14 +180,22 @@ export default {
 
     onMounted(() => {
       if (props.show) {
+        document.body.classList.add('modal-open')
         fetchCustomerData()
       }
     })
 
     watch(() => props.show, (newVal) => {
       if (newVal) {
+        document.body.classList.add('modal-open')
         fetchCustomerData()
+      } else {
+        document.body.classList.remove('modal-open')
       }
+    })
+
+    onUnmounted(() => {
+      document.body.classList.remove('modal-open')
     })
 
     return {
@@ -269,25 +278,11 @@ export default {
   padding: 0 12px;
 }
 
-.btn {
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid rgba(0,0,0,.1);
-  background: #fff;
-  cursor: pointer;
-  padding: 0 16px;
-}
-
-.btn.primary {
-  background: #030213;
-  color: #fff;
-  border: none;
-}
-
 .actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 /* 토스트 메시지 */
@@ -305,14 +300,4 @@ export default {
   font-size: 14px;
 }
 
-@media (max-width: 480px) {
-  .modal-content {
-    width: 95%;
-    max-height: 95vh;
-  }
-
-  .modal-body {
-    padding: 16px;
-  }
-}
 </style>

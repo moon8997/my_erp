@@ -242,4 +242,18 @@ public class SalesService {
         // 삭제된 레코드도 모두 제거하여 향후 제약 충돌 방지
         salesMapper.deleteAllDeletedRowsForSaleProduct(saleId, productId);
     }
+
+    public void updateBillSatus(List<Long> salesIds) {
+        for(int i=0; i<salesIds.size(); i++){
+            Long salesId = salesIds.get(i);
+            salesMapper.updateBillSatatus(salesId);
+        }
+    }
+
+    public void resetBillStatusForSaleId(Long saleId) {
+        if (saleId == null) {
+            throw new IllegalArgumentException("saleId가 필요합니다.");
+        }
+        salesMapper.resetBillStatusBySaleIds(java.util.List.of(saleId));
+    }
 }

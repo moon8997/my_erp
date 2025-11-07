@@ -1,6 +1,6 @@
 <template>
   <div class="modal-backdrop" v-if="show" @click.self="closeModal">
-    <div class="modal-content">
+    <div class="modal-content order-edit">
       <div class="modal-header">
         <h2>주문 수정</h2>
         <button class="close-button" @click="closeModal">
@@ -140,10 +140,11 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, onUnmounted } from 'vue';
 import axios from '../api/client';
 // 유틸리티 함수 임포트
 import { getChosung, filterList } from '../utils/util';
+import '../views/styles/common.css'
 
 export default {
   name: 'OrderEditModal',
@@ -326,6 +327,9 @@ export default {
     onMounted(async () => {
       await fetchProducts();
       // 컴포넌트가 처음 생성될 때 이미 show가 true이거나 orderData가 존재하는 경우 대비
+      if (props.show) {
+        document.body.classList.add('modal-open');
+      }
       if (props.show && props.orderData) {
         initializeForm();
       }
@@ -334,8 +338,11 @@ export default {
     // 모달 열린 상태로 변경될 때 초기화
     watch(() => props.show, (newVal) => {
       if (newVal) {
+        document.body.classList.add('modal-open');
         initializeForm();
         syncItemPricesFromProducts();
+      } else {
+        document.body.classList.remove('modal-open');
       }
     });
 
@@ -345,6 +352,10 @@ export default {
         initializeForm();
         syncItemPricesFromProducts();
       }
+    });
+
+    onUnmounted(() => {
+      document.body.classList.remove('modal-open');
     });
 
     return {
@@ -446,9 +457,10 @@ export default {
 .item { display: grid; grid-template-columns: 2fr 0.8fr 1fr auto; gap: 10px; align-items: end; }
 
 .actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .btn {
@@ -549,17 +561,5 @@ export default {
     padding: 16px;
   }
 
-  .item {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .actions {
-    flex-direction: column;
-  }
-
-  .btn {
-    width: 100%;
-  }
 }
 </style>

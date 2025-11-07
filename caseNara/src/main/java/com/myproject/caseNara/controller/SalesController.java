@@ -68,6 +68,20 @@ public class SalesController {
         }
     }
 
+    @PutMapping("/bill-status/reset/{saleId}")
+    public ResponseEntity<?> resetBillStatus(@PathVariable Long saleId) {
+        try {
+            salesService.resetBillStatusForSaleId(saleId);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "청구 상태 초기화 중 오류가 발생했습니다";
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", errorMessage
+            ));
+        }
+    }
+
     @DeleteMapping("/{saleId}/products/{productId}")
     public ResponseEntity<?> deleteOrderItem(
             @PathVariable Long saleId,

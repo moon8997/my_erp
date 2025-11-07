@@ -5,7 +5,7 @@
       <p class="desc">주문 정보를 입력해주세요</p>
     </header>
 
-    <section class="card">
+    <section class="card order-add">
       <form @submit.prevent="submitOrder" class="form">
         <div class="row">
           <label class="label" for="customerName">

@@ -280,7 +280,19 @@ export default {
   }
 
   .text-ellipsis {
-    max-width: calc(100% - 100px);
+    max-width: unset;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+  }
+
+  /* 주소 열은 모바일에서 줄바꿈 허용 */
+  .table tbody td[data-label="주소"] {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
   }
 
   .actions {
@@ -336,7 +348,7 @@ export default {
   }
 
   .text-ellipsis {
-    max-width: 120px;
+    max-width: 300px;
   }
 }
 

@@ -1,6 +1,7 @@
 package com.myproject.caseNara.controller;
 
 import com.myproject.caseNara.model.Bill;
+import com.myproject.caseNara.model.BillWithSales;
 import com.myproject.caseNara.service.BillService;
 import com.myproject.caseNara.service.BillService.BillRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,8 @@ public class BillController {
         }
     }
 
+    
+
     /**
      * 특정 고객의 Bill 목록 조회
      */
@@ -46,6 +49,25 @@ public class BillController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "bills", bills
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", e.getMessage() != null ? e.getMessage() : "Unknown error"
+            ));
+        }
+    }
+
+    /**
+     * 상태=0인 청구서와 연결된 판매 정보를 조회합니다.
+     */
+    @GetMapping("/with-sales")
+    public ResponseEntity<?> listBillsWithSales() {
+        try {
+            List<BillWithSales> rows = billService.listBillsWithSales();
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "rows", rows
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

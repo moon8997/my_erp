@@ -67,7 +67,8 @@
             s.UPDATED_AT,
             c.COMPANY_NAME as customerName,
             p.PRODUCT_NAME as productName,
-            p.SALE_PRICE as productPrice
+            p.SALE_PRICE as productPrice,
+            s.bill_status as billStatus
         FROM SALES s
         JOIN CUSTOMERS c ON s.CUSTOMER_ID = c.CUSTOMER_ID
         JOIN PRODUCTS p ON s.PRODUCT_ID = p.PRODUCT_ID
@@ -217,4 +218,12 @@
           AND IFNULL(c.DELETED, 0) = 0
           AND IFNULL(p.DELETED, 0) = 0
     </select>
+
+    <!-- 선택한 SALE_ID들의 청구 상태(bill_status)를 1로 업데이트 -->
+    <update id="updateBillSatatus">
+        UPDATE SALES
+        SET BILL_STATUS = 1
+        WHERE IFNULL(DELETED, 0) = 0
+          AND SALE_ID = #{salesId}
+    </update>
 </mapper>

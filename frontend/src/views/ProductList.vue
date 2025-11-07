@@ -111,7 +111,7 @@ export default {
     const searchQuery = ref('')
     const loading = ref(false)
     const currentPage = ref(1)
-    const itemsPerPage = 12
+    const itemsPerPage = 60
     const hasMore = ref(true)
     const productGrid = ref(null)
     const gridColumns = ref(parseInt(localStorage.getItem('productGridColumns')) || 3)

@@ -52,4 +52,29 @@
         WHERE BILL_ID = #{billId}
     </update>
 
+    <!-- bills_sales 매핑 일괄 저장 -->
+    <insert id="insertBillSales">
+        INSERT INTO BILLS_SALES (BILL_ID, SALES_ID)
+        VALUES
+        <foreach collection="salesIds" item="sid" separator=",">
+            (#{billId}, #{sid})
+        </foreach>
+    </insert>
+
+    <!-- 상태=0인 Bill과 매핑된 Sales를 조회 -->
+    <select id="listBillsWithSales" resultType="com.myproject.caseNara.model.BillWithSales">
+        SELECT 
+            a.BILL_ID as billId,
+            a.CUSTOMER_ID as customerId,
+            a.TOTAL_COST as totalCost,
+            a.REMAIN_COST as remainCost,
+            a.STATUS as status,
+            a.CREATED_AT as createdAt,
+            b.SALES_ID as salesId
+        FROM BILLS a
+        JOIN BILLS_SALES b ON a.BILL_ID = b.BILL_ID
+        WHERE a.STATUS = 0
+        ORDER BY a.BILL_ID
+    </select>
+
 </mapper>

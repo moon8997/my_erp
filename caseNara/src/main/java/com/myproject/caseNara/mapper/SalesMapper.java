@@ -46,4 +46,7 @@ public interface SalesMapper {
 
     // 삭제된 레코드 하드 삭제
     int deleteAllDeletedRowsForSaleProduct(@Param("saleId") Long saleId, @Param("productId") Long productId);
+
+    void updateBillSatatus(Long salesId);
+    void resetBillStatusBySaleIds(@Param("salesIds") List<Long> salesIds);
 }
