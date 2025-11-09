@@ -14,7 +14,7 @@ import java.util.List;
 
 @Service
 public class SalesService {
-
+    
     @Autowired
     private SalesMapper salesMapper;
     
@@ -68,16 +68,31 @@ public class SalesService {
             );
 
             if (existingSale != null) {
-                // 기존 주문이 있는 경우 수량과 금액 업데이트
-                int additionalPrice = product.getSalePrice() * item.quantity();
-                inserted += salesMapper.updateSaleQuantity(
-                    existingSale.getSaleId(),
-                    product.getProductId(),
-                    item.quantity(),
-                    additionalPrice
-                );
+                // 기존 주문이 있지만 billStatus가 1인 경우는 새로 생성
+                Integer status = existingSale.getBillStatus();
+                boolean billed = status != null && status == 1;
+                if (billed) {
+                    Sale sale = Sale.builder()
+                            .customerId(customer.getCustomerId())
+                            .productId(product.getProductId())
+                            .quantity(item.quantity())
+                            .unitPrice(product.getSalePrice() * item.quantity())
+                            .saleAt(saleAt)
+                            .deleted(0)
+                            .build();
+                    inserted += salesMapper.insertSale(sale);
+                } else {
+                    // 기존 주문 병합: 수량과 금액 업데이트
+                    int additionalPrice = product.getSalePrice() * item.quantity();
+                    inserted += salesMapper.updateSaleQuantity(
+                        existingSale.getSaleId(),
+                        product.getProductId(),
+                        item.quantity(),
+                        additionalPrice
+                    );
+                }
             } else {
-                // 새로운 주문 생성
+                // 기존 주문이 없으면 새로 생성
                 Sale sale = Sale.builder()
                         .customerId(customer.getCustomerId())
                         .productId(product.getProductId())
@@ -255,5 +270,6 @@ public class SalesService {
             throw new IllegalArgumentException("saleId가 필요합니다.");
         }
         salesMapper.resetBillStatusBySaleIds(java.util.List.of(saleId));
+        // billService.deleteBillBySaleId(saleId);
     }
 }

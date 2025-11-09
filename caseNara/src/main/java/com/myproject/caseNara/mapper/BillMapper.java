@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface BillMapper {
@@ -15,4 +16,13 @@ public interface BillMapper {
     int updateStatus(@Param("billId") Long billId, @Param("status") Integer status);
     int insertBillSales(@Param("billId") Long billId, @Param("salesIds") List<Long> salesIds);
     List<BillWithSales> listBillsWithSales();
+    List<Long> listSalesIdsByBillId(@Param("billId") Long billId);
+    List<Map<String, Object>> listBills(@Param("startDate") String startDate, @Param("endDate") String endDate);
+    int applyReceive(@Param("billId") Long billId, @Param("amount") Integer amount);
+    int settleBill(@Param("billId") Long billId);
+    int rollbackBill(@Param("billId") Long billId);
+    Long findBillIdBySaleId(Long saleId);
+    void deleteBillByBillId(Long billId);
+    void deleteBillBySaleId(Long saleId);
+    void deleteBillSalesByBillId(@Param("billId") Long billId);
 }

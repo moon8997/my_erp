@@ -106,12 +106,22 @@
         >
           <td class="x21" style="height:18.75pt;"></td>
           <td colspan="3" class="x117" id="tc10" style="border-right:1px solid #000000;border-bottom:1px solid #000000;">{{ row.saleMonthDay }}</td>
-          <td colspan="4" class="x50" style="border-right:1px solid #000000;border-bottom:1px solid #000000;">{{ row.productName }}</td>
+          <td colspan="4" class="x50" style="border-right:1px solid #000000;border-bottom:1px solid #000000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ row.productName }}</td>
           <td colspan="2" class="x50" style="border-right:1px solid #000000;border-bottom:1px solid #000000;">{{ row.quantity }}</td>
           <td colspan="3" class="x51" style="border-right:1px solid #000000;border-bottom:1px solid #000000;">{{ formatMoney(row.productPrice) }}</td>
           <td colspan="4" class="x54" style="border-right:2px solid #000000;border-bottom:1px solid #000000;">{{ formatMoney(row.unitPrice) }}</td>
         </tr>
+        <!-- 미수금 표시 영역: 고객에 미납 금액(outstandingAmount)이 있을 때 하단에 표시 -->
+        <tr v-if="outstandingAmount > 0" style="">
+          <td class="x21" style="height:18.75pt; border-right:2px solid #000000;"></td>
+          <td colspan="16" class="x116" id="tc-arrears" style="border-right:2px solid #000000; border-bottom:1px solid #000000;">
+            미수금 : {{ formatMoney(outstandingAmount) }}
+          </td>
+        </tr>
       </tbody>
+
+      
+
 
       <tfoot>
         <tr style="height:25.5pt">
@@ -179,7 +189,7 @@ export default {
       return ''
     },
     rows() {
-      const MAX_ROWS = 15
+      const MAX_ROWS = this.outstandingAmount > 0 ? 14 : 15
       let rows = []
 
       // items 기반으로 행 생성 (개별 판매 행 유지)
@@ -206,7 +216,7 @@ export default {
         }))
       }
 
-      // 15행 미만이면 빈 행으로 채우기
+      // 페이지 행 수에 맞춰 빈 행으로 채우기
       if (rows.length < MAX_ROWS) {
         const emptyCount = MAX_ROWS - rows.length
         for (let i = 0; i < emptyCount; i++) {
@@ -221,6 +231,10 @@ export default {
       }
 
       return rows
+    }
+  ,
+    outstandingAmount() {
+      return Number(this.order?.outstandingAmount || 0)
     }
   },
   methods: {

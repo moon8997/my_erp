@@ -92,15 +92,22 @@
                   autocomplete='off'
                   :ref="el => (productInputRefs[idx] = el)"
                 />
-                <ul v-if="productDropdown[idx] && (productFiltered[idx]?.length)" class="dropdown">
-                  <li
-                    v-for="p in productFiltered[idx]"
-                    :key="p"
-                    @mousedown="() => selectProduct(idx, p)"
+                <!-- 드롭다운을 body로 텔레포트하여 컨테이너 밖으로 오버레이 -->
+                <teleport to="body">
+                  <ul
+                    v-if="productDropdown[idx] && (productFiltered[idx]?.length)"
+                    class="dropdown-portal"
+                    :style="getProductDropdownStyle(idx)"
                   >
-                    {{ p }}
-                  </li>
-                </ul>
+                    <li
+                      v-for="p in productFiltered[idx]"
+                      :key="p"
+                      @mousedown="() => selectProduct(idx, p)"
+                    >
+                      {{ p }}
+                    </li>
+                  </ul>
+                </teleport>
               </div>
 
               <div class="field">
@@ -165,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from '../api/client';
 import './styles/common.css'
@@ -370,10 +377,27 @@ const productDropdown = ref({}); // { idx: boolean }
 const productFiltered = ref({}); // { idx: string[] }
 const productTimers = {}; // { idx: number }
 const productChosungs = ref([]);
+const productDropdownPos = ref({}); // { idx: { left, top, width } }
+
+const updateProductDropdownPos = (idx) => {
+  const el = productInputRefs.value?.[idx];
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  productDropdownPos.value[idx] = {
+    left: `${rect.left + window.scrollX}px`,
+    top: `${rect.bottom + window.scrollY - 12}px`,
+    width: `${rect.width}px`
+  };
+};
+
+const getProductDropdownStyle = (idx) => {
+  return productDropdownPos.value[idx] || {};
+};
 
 const onProductInput = (idx, e) => {
   const term = e.target.value.trim();
   productDropdown.value[idx] = !!term;
+  updateProductDropdownPos(idx);
   if (productTimers[idx]) clearTimeout(productTimers[idx]);
   productTimers[idx] = setTimeout(() => {
     productFiltered.value[idx] = filterList(term, allProductNames.value, productChosungs.value);
@@ -384,6 +408,7 @@ const activeProductIndex = ref(0);
 const onProductFocus = (idx) => {
   activeProductIndex.value = idx;
   productDropdown.value[idx] = true;
+  updateProductDropdownPos(idx);
 };
 
 const selectProduct = (idx, name) => {
@@ -416,6 +441,24 @@ const hideProductDropdown = (idx) => {
     ignoreProductBlurValidation[idx] = false;
   }, 150);
 };
+
+// 스크롤/리사이즈 시 활성 드롭다운 위치 갱신
+const repositionActiveProductDropdown = () => {
+  const idx = activeProductIndex.value;
+  if (productDropdown.value[idx]) {
+    updateProductDropdownPos(idx);
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('scroll', repositionActiveProductDropdown, true);
+  window.addEventListener('resize', repositionActiveProductDropdown, true);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', repositionActiveProductDropdown, true);
+  window.removeEventListener('resize', repositionActiveProductDropdown, true);
+});
 
 const insertTopProduct = (name) => {
   // 이미 같은 이름의 상품이 있으면 수량 +1
@@ -509,7 +552,7 @@ const insertTopProduct = (name) => {
 /* 공통 드롭다운 스타일 */
 .dropdown {
   position: absolute;
-  top: 40px;
+  top: 22px;
   left: 0;
   right: 0;
   background: #ffffff;
@@ -530,6 +573,28 @@ const insertTopProduct = (name) => {
 }
 .dropdown li:hover { background: #f9fafb; }
 .dropdown li + li { border-top: 1px solid #f3f4f6; }
+
+/* body 텔레포트용 드롭다운: 페이지 기준 절대 위치 */
+.dropdown-portal {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+  z-index: 2000;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.dropdown-portal li {
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+.dropdown-portal li:hover { background: #f9fafb; }
+.dropdown-portal li + li { border-top: 1px solid #f3f4f6; }
 
 /* 추천 상품 섹션 */
 .top-products {

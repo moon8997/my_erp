@@ -226,4 +226,15 @@
         WHERE IFNULL(DELETED, 0) = 0
           AND SALE_ID = #{salesId}
     </update>
+
+    <!-- SALE_ID 목록에 대해 청구 상태(bill_status)를 0으로 초기화 -->
+    <update id="resetBillStatusBySaleIds">
+        UPDATE SALES
+        SET BILL_STATUS = 0
+        WHERE IFNULL(DELETED, 0) = 0
+          AND SALE_ID IN
+          <foreach collection="salesIds" item="sid" open="(" separator="," close=")">
+            #{sid}
+          </foreach>
+    </update>
 </mapper>

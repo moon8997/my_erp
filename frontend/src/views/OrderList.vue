@@ -48,12 +48,18 @@
             <div class="order-info">
               <h3>
                 {{ order.customerName }}
-                <i v-if="order.billStatus === 1" class="fas fa-check-circle bill-check-icon" aria-label="billed"></i>
+                <i
+                  v-if="order.billStatus === 1 && order.saleId"
+                  class="fas fa-check-circle bill-check-icon"
+                  aria-label="billed"
+                  title="청구 상태 초기화"
+                  @click.stop="resetBillStatus(order)"
+                ></i>
               </h3>
               <p class="order-date">{{ formatDate(order.orderDate) }}</p>
             </div>
             <div class="order-actions">
-              <button class="btn edit-btn" @click="editOrder(order)">
+              <button class="btn edit-btn" @click="editOrder(order)" :disabled="order.billStatus === 1" :title="order.billStatus === 1 ? '청구서 처리됨: 수정 불가' : '수정'">
                 <i class="fas fa-edit"></i>
               </button>
               <div class="order-badge">
@@ -70,7 +76,7 @@
               </div>
               <div class="product-actions">
                 <p class="product-price">{{ formatPrice(product.price) }}</p>
-                <button class="btn delete-btn" @click="deleteProduct(order, product)" text-size="small">
+                <button class="btn delete-btn" @click="deleteProduct(order, product)" text-size="small" :disabled="order.billStatus === 1" :title="order.billStatus === 1 ? '청구서 처리됨: 삭제 불가' : '삭제'">
                   <i class="fas fa-trash-alt"></i>
                 </button>
               </div>
@@ -320,6 +326,27 @@ export default {
           acc[key].totalAmount += sale.unitPrice
           return acc
         }, {})
+
+        // 고객별 미수금(미납된 remainCost 합계) 조회 후 그룹 데이터에 반영
+        const customerIds = Object.keys(grouped)
+        const arrearsMap = {}
+        try {
+          // 고객별 미수금은 고객 전용 API로 조회하고, 완납(STATUS=2)은 제외하여 합산
+          await Promise.all(customerIds.map(async (cid) => {
+            const res = await axios.get(`/api/bills/by-customer/${cid}`)
+            const bills = res?.data?.bills || []
+            const sumRemain = bills
+              .filter(b => Number(b?.status) === 1)
+              .reduce((sum, b) => sum + Number(b?.remainCost || 0), 0)
+            arrearsMap[cid] = sumRemain
+          }))
+        } catch (e) {
+          console.error('Failed to fetch arrears per customer:', e1)
+        }
+        // 그룹 데이터에 미수금 반영
+        Object.values(grouped).forEach(order => {
+          order.outstandingAmount = Number(arrearsMap[order.customerId] || 0)
+        })
         // Bill 생성 API 요청 (고객별 1건) + 매핑용 salesIds 포함
         const billRequests = Object.values(grouped).map(order => {
           const salesIdsSet = new Set((order.items || []).map(it => it.saleId).filter(id => id != null))
@@ -346,27 +373,28 @@ export default {
           console.error('Failed to create bills:', err)
           showToast(err?.response?.data?.message || '청구서 생성 중 오류가 발생했습니다')
         }
-        // 항목이 15개를 넘으면 여러 영수증으로 분할
-        const MAX_ROWS = 15
+        // 항목 분할: 미수금 행이 있는 경우 페이지당 14행, 없으면 15행
         const chunked = []
         Object.values(grouped).forEach(order => {
           const items = order.items || []
           if (items.length === 0) {
-            chunked.push(order)
+            chunked.push({ ...order })
             return
           }
           // 고객 전체 합계를 각 영수증에 동일하게 표시
           const customerTotal = items.reduce((sum, it) => sum + Number(it?.unitPrice || 0), 0)
-          const pageCount = Math.ceil(items.length / MAX_ROWS)
-          for (let i = 0; i < items.length; i += MAX_ROWS) {
-            const slice = items.slice(i, i + MAX_ROWS)
+          const perPage = Number(order?.outstandingAmount || 0) > 0 ? 14 : 15
+          const pageCount = Math.ceil(items.length / perPage)
+          for (let i = 0; i < items.length; i += perPage) {
+            const slice = items.slice(i, i + perPage)
             chunked.push({
               customerId: order.customerId,
               customerName: order.customerName,
               orderDate: order.orderDate,
               items: slice,
               totalAmount: customerTotal,
-              receiptPageIndex: Math.floor(i / MAX_ROWS) + 1,
+              outstandingAmount: Number(order?.outstandingAmount || 0),
+              receiptPageIndex: Math.floor(i / perPage) + 1,
               receiptPageCount: pageCount
             })
           }
@@ -448,6 +476,34 @@ export default {
       }
     }
 
+    const resetBillStatus = async (order) => {
+      if (!order?.saleId) return
+      if (!confirm('해당 판매건의 청구서를 삭제하고 상태를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+        return
+      }
+      try {
+        // 새로 추가된 API: 해당 saleId가 속한 청구서를 삭제하며 연결된 판매건의 청구 상태를 초기화
+        const delRes = await axios.delete(`/api/bills/by-sale/${order.saleId}`)
+        if (delRes?.data?.success) {
+          showToast('청구서를 삭제하고 상태를 초기화했습니다')
+          await fetchOrders()
+          return
+        } else {
+          // 삭제 실패 시 기존 단일 판매건 청구 상태 초기화로 폴백
+          const res = await axios.put(`/api/sales/bill-status/reset/${order.saleId}`)
+          if (res?.data?.success) {
+            showToast('청구 상태를 초기화했습니다')
+            await fetchOrders()
+          } else {
+            showToast(res?.data?.message || '청구 상태 초기화 실패')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to delete bill by sale or reset status:', error)
+        showToast('청구서 삭제 또는 상태 초기화 중 오류가 발생했습니다')
+      }
+    }
+
     onMounted(() => {
       fetchOrders()
     })
@@ -477,6 +533,7 @@ export default {
       selectedOrder,
       editOrder,
       deleteProduct,
+      resetBillStatus,
       closeEditModal,
       handleOrderUpdate,
       toast,
@@ -600,6 +657,7 @@ export default {
   font-size: 16px;
   margin-left: 8px;
   vertical-align: middle;
+  cursor: pointer;
 }
 
 .order-date {
@@ -629,6 +687,17 @@ export default {
   border-radius: var(--border-radius);
 }
 
+.edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.edit-btn:disabled, .delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .order-badge {
   background: var(--input-bg);
@@ -824,11 +893,6 @@ export default {
   z-index: 1000;
   font-size: 14px;
 }
-
-</style>
-
-<!-- 글로벌 인쇄 규칙: 헤더 숨김, 여백 최소화, 영수증만 출력 -->
-<style>
 @media print {
   @page { size: A4 landscape; margin: 0 0 0 3mm; }
   html, body { margin: 0; padding: 0; }
@@ -838,8 +902,6 @@ export default {
   .print-area, .print-area * { visibility: visible !important; }
   .print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
 
-  /* 전역 헤더(네비게이션) 강제 숨김 */
-  .header-container { display: none !important; }
   /* 일반 화면 요소 숨김 (스코프 스타일 내 요소 포함) */
   .page-header, .card, .toast { display: none !important; }
 
@@ -852,4 +914,11 @@ export default {
   .receipt-cell { page-break-inside: avoid; break-inside: avoid; margin: 0; padding: 0; }
   
 }
+</style>
+
+<style>
+@media print {
+  /* 전역 헤더(네비게이션) 강제 숨김 */
+  .header-container { display: none !important; }
+}  
 </style>
