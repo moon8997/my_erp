@@ -19,6 +19,21 @@ public interface SalesMapper {
     Sale findExistingSale(@Param("customerId") Long customerId, 
                          @Param("productId") Long productId, 
                          @Param("saleAt") LocalDateTime saleAt);
+
+    // 동일 날짜/고객의 열린 주문(SALE_ID) 조회 (bill_status=0)
+    Long findOpenSaleId(@Param("customerId") Long customerId, 
+                        @Param("saleAt") LocalDateTime saleAt);
+
+    // 대상 제외 동일 날짜/고객의 다른 열린 주문(SALE_ID들) 조회
+    List<Long> findOtherOpenSaleIds(@Param("customerId") Long customerId,
+                                    @Param("saleAt") LocalDateTime saleAt,
+                                    @Param("excludeSaleId") Long excludeSaleId);
+
+    // 특정 SALE_ID의 활성 항목 조회
+    List<Sale> listActiveItemsBySaleId(@Param("saleId") Long saleId);
+
+    // 특정 SALE_ID의 모든 항목 소프트 삭제
+    int softDeleteBySaleId(@Param("saleId") Long saleId);
     
     // 기존 주문 수량 및 금액 업데이트
     int updateSaleQuantity(@Param("saleId") Long saleId, 

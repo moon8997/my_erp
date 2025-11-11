@@ -10,6 +10,7 @@
                     WHERE CUSTOMER_ID = #{customerId}
                       AND DATE(SALE_AT) = DATE(#{saleAt})
                       AND IFNULL(DELETED, 0) = 0
+                      AND IFNULL(bill_status, 0) = 0
                     LIMIT 1
                 ),
                 (
@@ -35,6 +36,51 @@
             0
         )
     </insert>
+
+    <!-- 동일 날짜/고객의 열린 주문(SALE_ID) 조회 (bill_status=0) -->
+    <select id="findOpenSaleId" resultType="long">
+        SELECT SALE_ID
+        FROM SALES
+        WHERE CUSTOMER_ID = #{customerId}
+          AND DATE(SALE_AT) = DATE(#{saleAt})
+          AND IFNULL(DELETED, 0) = 0
+          AND IFNULL(bill_status, 0) = 0
+        LIMIT 1
+    </select>
+
+    <!-- 대상 제외 동일 날짜/고객의 다른 열린 주문(SALE_ID들) 조회 -->
+    <select id="findOtherOpenSaleIds" resultType="long">
+        SELECT DISTINCT SALE_ID
+        FROM SALES
+        WHERE CUSTOMER_ID = #{customerId}
+          AND DATE(SALE_AT) = DATE(#{saleAt})
+          AND IFNULL(DELETED, 0) = 0
+          AND IFNULL(bill_status, 0) = 0
+          AND SALE_ID != #{excludeSaleId}
+    </select>
+
+    <!-- 특정 SALE_ID의 활성 항목 조회 -->
+    <select id="listActiveItemsBySaleId" resultType="com.myproject.caseNara.model.Sale">
+        SELECT 
+            SALE_ID,
+            CUSTOMER_ID,
+            PRODUCT_ID,
+            QUANTITY,
+            UNIT_PRICE,
+            SALE_AT,
+            bill_status as billStatus
+        FROM SALES
+        WHERE SALE_ID = #{saleId}
+          AND IFNULL(DELETED, 0) = 0
+    </select>
+
+    <!-- 특정 SALE_ID의 모든 항목 소프트 삭제 -->
+    <update id="softDeleteBySaleId">
+        UPDATE SALES
+        SET DELETED = 1
+        WHERE SALE_ID = #{saleId}
+          AND IFNULL(DELETED, 0) = 0
+    </update>
 
     <!-- 상호명 기준 인기 상품 Top 5 -->
     <select id="listTopProductNamesByCompanyName" parameterType="string" resultType="string">
@@ -83,17 +129,19 @@
     <!-- 동일 날짜/고객/상품에 대한 주문 조회 -->
     <select id="findExistingSale" resultType="com.myproject.caseNara.model.Sale">
         SELECT 
-            SALE_ID,
+            SALE_ID as saleId,
             CUSTOMER_ID,
             PRODUCT_ID,
             QUANTITY,
             UNIT_PRICE,
-            SALE_AT
+            SALE_AT,
+            bill_status as billStatus
         FROM SALES
         WHERE CUSTOMER_ID = #{customerId}
           AND PRODUCT_ID = #{productId}
           AND DATE(SALE_AT) = DATE(#{saleAt})
           AND IFNULL(DELETED, 0) = 0
+          AND IFNULL(bill_status, 0) = 0
     </select>
 
     <!-- 기존 주문 수량 및 금액 업데이트 -->

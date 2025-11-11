@@ -95,7 +95,7 @@
                 <!-- 드롭다운을 body로 텔레포트하여 컨테이너 밖으로 오버레이 -->
                 <teleport to="body">
                   <ul
-                    v-if="productDropdown[idx] && (productFiltered[idx]?.length)"
+                    v-if="productDropdown[idx] && productFiltered[idx] && productFiltered[idx].length"
                     class="dropdown-portal"
                     :style="getProductDropdownStyle(idx)"
                   >
@@ -495,7 +495,6 @@ const insertTopProduct = (name) => {
   }
 };
 </script>
-
 <style scoped>
 .page {
   max-width: 896px;

@@ -795,7 +795,7 @@ export default {
 
 /* 인쇄 레이아웃 */
 .print-area { display: none; }
-.receipt-cell { page-break-inside: avoid; }
+.receipt-cell { page-break-inside: avoid;}
 .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; }
 .print-page { page-break-after: always; }
 
@@ -894,24 +894,17 @@ export default {
   font-size: 14px;
 }
 @media print {
-  @page { size: A4 landscape; margin: 0 0 0 3mm; }
+  @page { size: A4 portrait !important; padding-top: 15mm; }
   html, body { margin: 0; padding: 0; }
   
   /* 전체 화면 요소 숨기고 인쇄 영역만 표시 */
   body * { visibility: hidden !important; }
   .print-area, .print-area * { visibility: visible !important; }
-  .print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
-
+  .print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; transform: rotate(90deg); }
+  .receipt-cell { page-break-inside: avoid; }
   /* 일반 화면 요소 숨김 (스코프 스타일 내 요소 포함) */
   .page-header, .card, .toast { display: none !important; }
 
-  /* 페이지 분할 공백 제거 */
-  .print-page { page-break-after: always; }
-  .print-page:last-child { page-break-after: auto; }
-
-  /* 여백/간격 최소화 */
-  .print-grid { gap: 4mm !important; align-content: start; }
-  .receipt-cell { page-break-inside: avoid; break-inside: avoid; margin: 0; padding: 0; }
   
 }
 </style>

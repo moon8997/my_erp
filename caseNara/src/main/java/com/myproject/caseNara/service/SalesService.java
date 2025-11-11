@@ -51,8 +51,14 @@ public class SalesService {
             throw new IllegalArgumentException("상호명을 찾을 수 없습니다.");
         }
 
+        // 판매일자 검증
+        if (request.saleDate() == null || request.saleDate().isBlank()) {
+            throw new IllegalArgumentException("판매일자가 필요합니다.");
+        }
         LocalDateTime saleAt = LocalDateTime.parse(request.saleDate() + "T00:00:00");
 
+        // 동일 날짜/고객에 대해 하나의 SALE_ID로 묶기: 열린 주문이 있으면 재사용, 없으면 첫 항목 삽입 시 생성
+        Long saleIdToUse = salesMapper.findOpenSaleId(customer.getCustomerId(), saleAt);
         int inserted = 0;
         for (CreateOrderItem item : request.items()) {
             Product product = productMapper.getProductByName(item.productName());
@@ -60,49 +66,49 @@ public class SalesService {
                 throw new IllegalArgumentException("상품을 찾을 수 없습니다: " + item.productName());
             }
 
-            // 동일 날짜/고객/상품에 대한 기존 주문 확인
-            Sale existingSale = salesMapper.findExistingSale(
-                customer.getCustomerId(),
-                product.getProductId(),
-                saleAt
-            );
+            // 수량 및 단가 검증
+            if (item.quantity() == null || item.quantity() <= 0) {
+                throw new IllegalArgumentException("수량이 올바르지 않습니다: " + item.productName());
+            }
+            Integer salePrice = product.getSalePrice();
+            if (salePrice == null || salePrice <= 0) {
+                throw new IllegalArgumentException("상품 단가가 설정되지 않았습니다: " + item.productName());
+            }
+            int unitPrice = salePrice * item.quantity();
 
-            if (existingSale != null) {
-                // 기존 주문이 있지만 billStatus가 1인 경우는 새로 생성
-                Integer status = existingSale.getBillStatus();
-                boolean billed = status != null && status == 1;
-                if (billed) {
-                    Sale sale = Sale.builder()
-                            .customerId(customer.getCustomerId())
-                            .productId(product.getProductId())
-                            .quantity(item.quantity())
-                            .unitPrice(product.getSalePrice() * item.quantity())
-                            .saleAt(saleAt)
-                            .deleted(0)
-                            .build();
-                    inserted += salesMapper.insertSale(sale);
-                } else {
-                    // 기존 주문 병합: 수량과 금액 업데이트
-                    int additionalPrice = product.getSalePrice() * item.quantity();
-                    inserted += salesMapper.updateSaleQuantity(
-                        existingSale.getSaleId(),
-                        product.getProductId(),
-                        item.quantity(),
-                        additionalPrice
-                    );
-                }
-            } else {
-                // 기존 주문이 없으면 새로 생성
+            if (saleIdToUse == null) {
+                // 첫 항목: SALE_ID가 없으면 삽입하며 selectKey로 SALE_ID를 생성/재사용
                 Sale sale = Sale.builder()
                         .customerId(customer.getCustomerId())
                         .productId(product.getProductId())
                         .quantity(item.quantity())
-                        .unitPrice(product.getSalePrice() * item.quantity())
+                        .unitPrice(unitPrice)
                         .saleAt(saleAt)
                         .deleted(0)
                         .build();
-
                 inserted += salesMapper.insertSale(sale);
+                saleIdToUse = sale.getSaleId();
+                continue;
+            }
+
+            // 이후 항목: 동일 SALE_ID로 병합 시도, 없으면 동일 SALE_ID로 신규 추가
+            int updated = salesMapper.updateSaleQuantity(
+                    saleIdToUse,
+                    product.getProductId(),
+                    item.quantity(),
+                    unitPrice
+            );
+            if (updated == 0) {
+                Sale newSale = Sale.builder()
+                        .saleId(saleIdToUse)
+                        .customerId(customer.getCustomerId())
+                        .productId(product.getProductId())
+                        .quantity(item.quantity())
+                        .unitPrice(unitPrice)
+                        .saleAt(saleAt)
+                        .deleted(0)
+                        .build();
+                inserted += salesMapper.insertSaleWithId(newSale);
             }
         }
 
@@ -269,7 +275,56 @@ public class SalesService {
         if (saleId == null) {
             throw new IllegalArgumentException("saleId가 필요합니다.");
         }
+        // 1) 대상 saleId 청구 상태 리셋
         salesMapper.resetBillStatusBySaleIds(java.util.List.of(saleId));
-        // billService.deleteBillBySaleId(saleId);
+
+        // 2) 같은 날짜/고객의 다른 열린 주문들을 대상 saleId로 흡수 병합
+        // 대상의 고객/일자를 조회
+        java.util.List<Sale> currentSales = salesMapper.findSalesById(saleId);
+        if (currentSales == null || currentSales.isEmpty()) {
+            return; // 대상에 활성 항목이 없으면 병합할 것이 없음
+        }
+        Long customerId = currentSales.get(0).getCustomerId();
+        java.time.LocalDateTime saleAt = currentSales.get(0).getSaleAt();
+
+        // 같은 날짜/고객의 다른 열린 saleId 조회
+        java.util.List<Long> others = salesMapper.findOtherOpenSaleIds(customerId, saleAt, saleId);
+        if (others == null || others.isEmpty()) {
+            return; // 병합 대상 없음
+        }
+
+        // 각 다른 saleId의 모든 활성 항목을 대상 saleId로 이동
+        for (Long otherId : others) {
+            java.util.List<Sale> items = salesMapper.listActiveItemsBySaleId(otherId);
+            if (items == null || items.isEmpty()) {
+                continue;
+            }
+            for (Sale item : items) {
+                Long productId = item.getProductId();
+                Integer qty = item.getQuantity();
+                Integer price = item.getUnitPrice();
+                if (productId == null || qty == null || qty <= 0 || price == null || price < 0) {
+                    continue; // 방어: 비정상 데이터는 스킵
+                }
+                int updated = salesMapper.updateSaleQuantity(saleId, productId, qty, price);
+                if (updated == 0) {
+                    // 대상에 동일 상품 행이 없으면 동일 saleId로 신규 추가
+                    Sale newRow = Sale.builder()
+                            .saleId(saleId)
+                            .customerId(customerId)
+                            .productId(productId)
+                            .quantity(qty)
+                            .unitPrice(price)
+                            .saleAt(saleAt)
+                            .deleted(0)
+                            .build();
+                    salesMapper.insertSaleWithId(newRow);
+                }
+                // 대상 saleId 내 중복 정리(있을 경우)를 위한 병합
+                mergeDuplicateItems(saleId, productId);
+            }
+            // 원본 saleId의 모든 항목을 소프트 삭제하여 흡수 완료
+            salesMapper.softDeleteBySaleId(otherId);
+        }
     }
 }
